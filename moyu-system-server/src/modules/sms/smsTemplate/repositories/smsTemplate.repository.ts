@@ -78,7 +78,7 @@ export class SmsTemplateRepository {
       where,
       select: this.simpleSelect,
       orderBy: { createTime: 'desc' },
-    }) as Promise<Array<Pick<SmsTemplateDO, 'id' | 'name' | 'code'>>>;
+    });
   }
 
   /**

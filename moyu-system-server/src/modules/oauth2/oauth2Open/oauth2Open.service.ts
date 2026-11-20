@@ -18,6 +18,7 @@ import { AuthError, Oauth2Error } from '@/config/error-messages';
 import { UserRepository } from '@/modules/user/user/repositories/user.repository';
 import { DEFAULT_TENANT_ID } from '@/config/constants';
 import { TenantContext } from '@/common/tenant/tenant.context';
+import { toPlainString } from '@/utils/to-plain-string';
 
 /** 授权码有效期：10 分钟 */
 const AUTHORIZE_CODE_TTL = 10 * 60 * 1000;
@@ -133,7 +134,7 @@ export class OAuth2OpenService {
     resp.userType = tokenRecord.userType;
     resp.tenantId = Number(tokenRecord.tenantId ?? '0');
     resp.clientId = tokenRecord.clientId;
-    resp.scopes = (tokenRecord.scopes as unknown as string[]) ?? [];
+    resp.scopes = (tokenRecord.scopes) ?? [];
     resp.accessToken = token;
     resp.exp = Math.round(tokenRecord.expiresTime.getTime() / 1000);
     return resp;
@@ -168,7 +169,7 @@ export class OAuth2OpenService {
       }
     });
 
-    resp.scopes = ((client.scopes as unknown as string[]) ?? []).map(
+    resp.scopes = ((client.scopes) ?? []).map(
       (scope) => ({
         key: scope,
         value: approvedScopes.has(scope),
@@ -238,7 +239,7 @@ export class OAuth2OpenService {
         userId: loginUser.id,
         userType: loginUser.userType,
         clientId: client.clientId,
-        scopes: scopes as any,
+        scopes: scopes,
         redirectUri: req.redirectUri!,
         state: req.state ?? null,
         expiresTime: new Date(Date.now() + AUTHORIZE_CODE_TTL),
@@ -297,7 +298,7 @@ export class OAuth2OpenService {
       codeRecord.userType,
       codeRecord.clientId,
       undefined,
-      (codeRecord.scopes as unknown as string[]) ?? [],
+      (codeRecord.scopes) ?? [],
       {
         tenantId: await this.resolveUserTenantId(codeRecord.userId),
         accessValiditySeconds: client.accessTokenValiditySeconds,
@@ -362,7 +363,7 @@ export class OAuth2OpenService {
       0,
       Math.round((tokenRecord.expiresTime.getTime() - Date.now()) / 1000),
     );
-    const scopes = (tokenRecord.scopes as unknown as string[]) ?? [];
+    const scopes = (tokenRecord.scopes as string[]) ?? [];
     resp.scope = scopes.length ? scopes.join(' ') : undefined;
     return resp;
   }
@@ -435,7 +436,7 @@ export class OAuth2OpenService {
     client: OAuth2ClientDO,
     redirectUri?: string,
   ): void {
-    const allowed = (client.redirectUris as unknown as string[]) ?? [];
+    const allowed = (client.redirectUris) ?? [];
     if (!redirectUri || !allowed.includes(redirectUri)) {
       throw new HttpException(
         Oauth2Error.REDIRECT_URI_NOT_REGISTERED,
@@ -450,7 +451,7 @@ export class OAuth2OpenService {
       throw new HttpException(Oauth2Error.SCOPE_REQUIRED, HttpStatus.BAD_REQUEST);
     }
     const allowed = new Set(
-      (client.scopes as unknown as string[]) ?? [],
+      (client.scopes) ?? [],
     );
     const invalid = scopes.find((scope) => !allowed.has(scope));
     if (invalid) {
@@ -501,10 +502,15 @@ export class OAuth2OpenService {
     const target = fragment ? url.hash : url.search;
     const paramsObj = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      if (value === undefined || value === null) {
+      if (
+        typeof value !== 'string' &&
+        typeof value !== 'number' &&
+        typeof value !== 'boolean' &&
+        typeof value !== 'bigint'
+      ) {
         return;
       }
-      paramsObj.set(key, String(value));
+      paramsObj.set(key, toPlainString(value));
     });
     if (state) {
       paramsObj.set('state', state);

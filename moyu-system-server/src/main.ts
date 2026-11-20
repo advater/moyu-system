@@ -93,7 +93,7 @@ async function bootstrap() {
   );
 
   // 前端常传空筛选：?userId=&clientId= → 删掉空串，避免可选字段校验失败
-  app.getHttpAdapter().getInstance().addHook('preValidation', async (request) => {
+  app.getHttpAdapter().getInstance().addHook('preValidation', (request) => {
     const query = request.query as Record<string, unknown> | undefined;
     if (!query || typeof query !== 'object') return;
     for (const key of Object.keys(query)) {

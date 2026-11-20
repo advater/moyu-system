@@ -92,7 +92,7 @@ export function httpStatusOf(err: unknown): number {
     err &&
     typeof err === 'object' &&
     'status' in err &&
-    typeof (err as { status: unknown }).status === 'number'
+    typeof (err).status === 'number'
   ) {
     return (err as { status: number }).status;
   }

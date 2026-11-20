@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, Modal, Select, message } from "antd";
 import * as MailTemplateApi from "@/api/system/mail/template";
 import type { MailAccountVO } from "@/api/system/mail/account";
@@ -13,25 +14,28 @@ export default function MailTemplateForm({
   onClose: () => void; onSuccess: () => void;
 }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     if (type === "update" && id) {
-      setLoading(true);
-      MailTemplateApi.getMailTemplate(id).then((data) => form.setFieldsValue(data)).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      MailTemplateApi.getMailTemplate(id).then((data) => form.setFieldsValue(data)).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ status: CommonStatusEnum.ENABLE });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") { await MailTemplateApi.createMailTemplate(values); message.success("新增成功"); }
       else { await MailTemplateApi.updateMailTemplate({ ...values, id }); message.success("修改成功"); }
       onSuccess();
-    } finally { setLoading(false); }
+    } finally { setSubmitting(false); }
   };
   return (
     <Modal open={open} title={type === "create" ? "新增邮件模板" : "修改邮件模板"} onCancel={onClose} onOk={submit} confirmLoading={loading} destroyOnHidden width={720}>

@@ -21,6 +21,7 @@ import {
   assertTencentSmsCallbackSign,
 } from './sms-callback-vendor';
 import { TenantContext } from '@/common/tenant/tenant.context';
+import { firstPlainString } from '@/utils/to-plain-string';
 
 type ReceiveReport = {
   serialNo?: string;
@@ -93,14 +94,14 @@ export class SmsCallbackService {
     for (const item of items) {
       const row = item as Record<string, unknown>;
       await this.applyReceiveReport({
-        serialNo: String(row.biz_id ?? row.bizId ?? ''),
-        mobile: String(row.phone_number ?? row.phoneNumber ?? ''),
+        serialNo: firstPlainString(row.biz_id, row.bizId),
+        mobile: firstPlainString(row.phone_number, row.phoneNumber),
         success:
           row.success === true ||
-          String(row.err_code ?? row.errCode ?? '').toUpperCase() ===
+          firstPlainString(row.err_code, row.errCode).toUpperCase() ===
             'DELIVERED',
-        code: String(row.err_code ?? row.errCode ?? ''),
-        msg: String(row.err_msg ?? row.errMsg ?? ''),
+        code: firstPlainString(row.err_code, row.errCode),
+        msg: firstPlainString(row.err_msg, row.errMsg),
       });
     }
     return true;
@@ -114,15 +115,16 @@ export class SmsCallbackService {
     const items = this.asArray(body);
     for (const item of items) {
       const row = item as Record<string, unknown>;
-      const status = String(
-        row.report_status ?? row.reportStatus ?? '',
+      const status = firstPlainString(
+        row.report_status,
+        row.reportStatus,
       ).toUpperCase();
       await this.applyReceiveReport({
-        serialNo: String(row.sid ?? row.serial_no ?? ''),
-        mobile: String(row.mobile ?? row.phone_number ?? ''),
+        serialNo: firstPlainString(row.sid, row.serial_no),
+        mobile: firstPlainString(row.mobile, row.phone_number),
         success: status === 'SUCCESS' || status === 'SUCCESSFUL',
         code: status,
-        msg: String(row.errmsg ?? row.description ?? ''),
+        msg: firstPlainString(row.errmsg, row.description),
       });
     }
     return true;
@@ -141,13 +143,13 @@ export class SmsCallbackService {
         : this.asArray(body);
     for (const item of items) {
       const row = item as Record<string, unknown>;
-      const status = String(row.status ?? '').toUpperCase();
+      const status = firstPlainString(row.status).toUpperCase();
       await this.applyReceiveReport({
-        serialNo: String(row.smsMsgId ?? row.sms_msg_id ?? ''),
-        mobile: String(row.to ?? row.mobile ?? ''),
+        serialNo: firstPlainString(row.smsMsgId, row.sms_msg_id),
+        mobile: firstPlainString(row.to, row.mobile),
         success: status === 'DELIVRD' || status === 'SUCCESS' || status === '0',
         code: status,
-        msg: String(row.statusDesc ?? row.description ?? ''),
+        msg: firstPlainString(row.statusDesc, row.description),
       });
     }
     return true;
@@ -164,13 +166,13 @@ export class SmsCallbackService {
       : this.asArray(body);
     for (const item of items) {
       const row = item as Record<string, unknown>;
-      const status = String(row.status ?? '').toLowerCase();
+      const status = firstPlainString(row.status).toLowerCase();
       await this.applyReceiveReport({
-        serialNo: String(row.message_id ?? row.messageId ?? ''),
-        mobile: String(row.mobile ?? ''),
+        serialNo: firstPlainString(row.message_id, row.messageId),
+        mobile: firstPlainString(row.mobile),
         success: status === 'success' || status === 'delivered',
         code: status,
-        msg: String(row.error ?? row.msg ?? ''),
+        msg: firstPlainString(row.error, row.msg),
       });
     }
     return true;

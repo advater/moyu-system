@@ -92,7 +92,7 @@ export class MailAccountRepository {
       where,
       select: this.simpleSelect,
       orderBy: { createTime: 'desc' },
-    }) as Promise<Array<Pick<MailAccountRow, 'id' | 'mail'>>>;
+    });
   }
 
   /**

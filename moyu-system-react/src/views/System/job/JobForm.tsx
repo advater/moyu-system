@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { AutoComplete, Form, Input, InputNumber, Modal, message } from "antd";
 import * as JobApi from "@/api/system/job";
 
@@ -10,25 +11,28 @@ export default function JobForm({
   onClose: () => void; onSuccess: () => void;
 }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     if (type === "update" && id) {
-      setLoading(true);
-      JobApi.getJob(id).then((data) => form.setFieldsValue(data)).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      JobApi.getJob(id).then((data) => form.setFieldsValue(data)).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ retryCount: 0, retryInterval: 0, monitorTimeout: 0 });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") { await JobApi.createJob(values); message.success("新增成功"); }
       else { await JobApi.updateJob({ ...values, id }); message.success("修改成功"); }
       onSuccess();
-    } finally { setLoading(false); }
+    } finally { setSubmitting(false); }
   };
   return (
     <Modal open={open} title={type === "create" ? "新增定时任务" : "修改定时任务"} onCancel={onClose} onOk={submit} confirmLoading={loading} destroyOnHidden>

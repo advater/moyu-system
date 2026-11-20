@@ -164,7 +164,7 @@ export class OssFileStorage implements FileStorage {
     return previewFileUrl(fileId);
   }
 
-  async getDownloadUrl(
+  getDownloadUrl(
     _fileId: number,
     relativePath: string,
     disposition: 'inline' | 'attachment',
@@ -176,7 +176,9 @@ export class OssFileStorage implements FileStorage {
       extraQuery['response-content-disposition'] =
         `${disposition}; filename*=UTF-8''${encodeURIComponent(fileName)}`;
     }
-    return this.presign('GET', relativePath, expires, extraQuery);
+    return Promise.resolve(
+      this.presign('GET', relativePath, expires, extraQuery),
+    );
   }
 
   async createUploadSession(
@@ -201,7 +203,7 @@ export class OssFileStorage implements FileStorage {
     const maxParts = meta.totalChunks;
     for (let i = 0; i < maxParts; i++) {
       partUrls.push(
-        await this.presign('PUT', meta.destPath, expires, {
+        this.presign('PUT', meta.destPath, expires, {
           partNumber: String(i + 1),
           uploadId: ossUploadId,
         }),
@@ -276,16 +278,18 @@ export class OssFileStorage implements FileStorage {
     });
   }
 
-  async presignPartUrl(
+  presignPartUrl(
     destPath: string,
     ossUploadId: string,
     index: number,
   ): Promise<string> {
     const expires = Math.floor(Date.now() / 1000) + 3600;
-    return this.presign('PUT', destPath, expires, {
-      partNumber: String(index + 1),
-      uploadId: ossUploadId,
-    });
+    return Promise.resolve(
+      this.presign('PUT', destPath, expires, {
+        partNumber: String(index + 1),
+        uploadId: ossUploadId,
+      }),
+    );
   }
 
   private objectUrl(objectKey: string, query?: Record<string, string>): string {
@@ -333,12 +337,12 @@ export class OssFileStorage implements FileStorage {
       .digest('base64');
   }
 
-  private async presign(
+  private presign(
     method: string,
     objectKey: string,
     expires: number,
     query: Record<string, string> = {},
-  ): Promise<string> {
+  ): string {
     const signature = this.sign(method, objectKey, String(expires), '', {}, query);
     const allQuery = {
       ...query,

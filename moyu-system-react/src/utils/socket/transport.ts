@@ -109,7 +109,7 @@ export class Transport {
       };
 
       socket.onclose = (e) => {
-        this._handleClose(e, socket);
+        this._handleClose(e);
       };
 
       socket.onmessage = (res) => {
@@ -117,7 +117,7 @@ export class Transport {
       };
 
       socket.onerror = (error) => {
-        this._handleError(error, socket);
+        this._handleError(error);
       };
 
       return socket;
@@ -155,7 +155,7 @@ export class Transport {
     this.emit("status_change", socket.readyState);
   }
 
-  private _handleClose(event: CloseEvent, _socket: WebSocket) {
+  private _handleClose(event: CloseEvent) {
     this.instance = null;
 
     if (this.duplicateFlag) {
@@ -198,7 +198,7 @@ export class Transport {
     }
   }
 
-  private _handleError(error: Event, _socket: WebSocket) {
+  private _handleError(error: Event) {
     console.error("WebSocket 连接错误:", error);
     this.instance = null;
     this.emit("error", error);

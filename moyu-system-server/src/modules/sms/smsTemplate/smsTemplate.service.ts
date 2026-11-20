@@ -282,7 +282,7 @@ export class SmsTemplateService {
     // 3. 校验模板参数完整性 + 按 {param} 占位符渲染正文
     const templateParams: Record<string, any> = req.templateParams ?? {};
     const paramNames: string[] = Array.isArray(template.params)
-      ? (template.params as string[])
+      ? (template.params)
       : [];
     const missingKey = paramNames.find((key) => {
       const value = templateParams[key];

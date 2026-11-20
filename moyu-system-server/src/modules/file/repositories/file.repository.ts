@@ -18,7 +18,7 @@ export class FileRepository {
 
   async selectById(id: number): Promise<FileDO | null> {
     const row = await this.prisma.sysFile.findUnique({ where: { id } });
-    return toFileDO(row as unknown as Record<string, unknown> | null);
+    return toFileDO(row);
   }
 
   async selectByHash(hash: string): Promise<FileDO | null> {
@@ -26,7 +26,7 @@ export class FileRepository {
       where: { hash },
       orderBy: { id: 'asc' },
     });
-    return toFileDO(row as unknown as Record<string, unknown> | null);
+    return toFileDO(row);
   }
 
   async countLiveByPath(path: string): Promise<number> {

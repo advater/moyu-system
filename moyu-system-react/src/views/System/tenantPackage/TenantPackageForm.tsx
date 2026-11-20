@@ -14,6 +14,12 @@ export default function TenantPackageForm({
   const [treeData, setTreeData] = useState<any[]>([]);
   const [checkedKeys, setCheckedKeys] = useState<number[]>([]);
   const [checkAll, setCheckAll] = useState(false);
+  const openKey = `${open}:${type}:${id ?? ""}`;
+  const [seenOpenKey, setSeenOpenKey] = useState(openKey);
+  if (openKey !== seenOpenKey) {
+    setSeenOpenKey(openKey);
+    if (open) setCheckAll(false);
+  }
 
   const collectIds = (nodes: any[]): number[] =>
     nodes.flatMap((n) => [n.id, ...(n.children ? collectIds(n.children) : [])]);
@@ -21,7 +27,6 @@ export default function TenantPackageForm({
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    setCheckAll(false);
     MenuApi.getSimpleMenusList().then(async (menus) => {
       const tree = handleTree(menus || []);
       setTreeData(tree);

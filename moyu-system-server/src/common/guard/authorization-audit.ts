@@ -30,7 +30,7 @@ export function auditAuthorizationDenied(
       ? context.switchToHttp().getRequest<HttpRequestMeta>()
       : undefined;
   const ua = request?.headers?.['user-agent'];
-  const userAgent = (Array.isArray(ua) ? ua[0] : (ua ?? '')) as string;
+  const userAgent = (Array.isArray(ua) ? ua[0] : (ua ?? ''));
 
   void operateLogService
     .createOperateLog({

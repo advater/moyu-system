@@ -57,8 +57,8 @@ moyu-system/
 ```bash
 cd moyu-system-server
 npm install
-cp .env.development .env.development.local   # 可选：在 local 文件里填写真实密钥，不要提交
-# 至少填写 DATABASE_URL、JWT_SECRET、SESSION_SECRET（生产环境密钥长度须 ≥ 32）
+cp .env.development .env.development.local   # 可选：在 local 文件或本地 .env 里填写真实密钥，不要提交
+# 至少填写 DATABASE_URL、JWT_SECRET、SESSION_SECRET（不要写入已入库的 .env.development；生产环境密钥长度须 ≥ 32）
 npx prisma generate
 npx prisma migrate dev
 npm run start:dev

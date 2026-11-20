@@ -4,16 +4,15 @@
 
 // 转换nodeList成Array
 export const nodeListToArray = function (nodes: NodeList) {
-  let array = null;
   try {
-    array = Array.from(nodes);
-  } catch (ex) {
-    array = [];
+    return Array.from(nodes);
+  } catch {
+    const array = [];
     for (let i = 0; i < nodes.length; i++) {
       array.push(nodes[0]);
     }
+    return array;
   }
-  return array;
 };
 
 // 任意位置点击是否在指定元素内部

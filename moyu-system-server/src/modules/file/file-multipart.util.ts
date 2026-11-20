@@ -2,6 +2,7 @@ import type { MultipartFile } from '@fastify/multipart';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { FileError } from '@/config/error-messages';
 import { parseAllowedTypes } from './file-validate';
+import { toPlainString } from '@/utils/to-plain-string';
 
 export function multipartField(
   fields: MultipartFile['fields'] | undefined,
@@ -12,14 +13,14 @@ export function multipartField(
   if (raw == null) return '';
   if (typeof raw === 'string') return raw;
   if (Array.isArray(raw)) {
-    return multipartField({ [name]: raw[0] } as MultipartFile['fields'], name);
+    return multipartField({ [name]: raw[0] }, name);
   }
   if (typeof raw === 'object' && raw && 'value' in raw) {
-    const value = (raw as { value: unknown }).value;
+    const value = raw.value;
     if (Array.isArray(value) || (value && typeof value === 'object')) {
       return '';
     }
-    return String(value ?? '');
+    return toPlainString(value);
   }
   return '';
 }
@@ -40,7 +41,7 @@ export function multipartAllowedTypes(
     );
   }
   if (typeof raw === 'object' && raw && 'value' in raw) {
-    return parseAllowedTypes((raw as { value: unknown }).value);
+    return parseAllowedTypes((raw).value);
   }
   return parseAllowedTypes(raw);
 }

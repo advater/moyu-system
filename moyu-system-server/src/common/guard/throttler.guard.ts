@@ -20,33 +20,35 @@ function headerValue(req: Record<string, any>, name: string): string {
  */
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
-  protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
+  protected shouldSkip(context: ExecutionContext): Promise<boolean> {
     if (context.getType() !== 'http') {
-      return true;
+      return Promise.resolve(true);
     }
 
     const request = context.switchToHttp().getRequest();
     const url = String(request.url || request.raw?.url || '');
     if (PUBLIC_PATHS.some((path) => url.startsWith(path))) {
-      return true;
+      return Promise.resolve(true);
     }
 
     if (process.env.NODE_ENV !== 'production') {
       const ip = this.resolveClientIp(request);
       if (LOOPBACK.has(ip)) {
-        return true;
+        return Promise.resolve(true);
       }
     }
 
-    return false;
+    return Promise.resolve(false);
   }
 
-  protected async getTracker(req: Record<string, any>): Promise<string> {
+  protected getTracker(req: Record<string, any>): Promise<string> {
     const user = req.loginUser ?? req.user;
     if (user?.id != null) {
-      return `t:${user.tenantId ?? user.tenant_id ?? 'x'}:u:${user.id}`;
+      return Promise.resolve(
+        `t:${user.tenantId ?? user.tenant_id ?? 'x'}:u:${user.id}`,
+      );
     }
-    return this.resolveClientIp(req);
+    return Promise.resolve(this.resolveClientIp(req));
   }
 
   private resolveClientIp(req: Record<string, any>): string {
@@ -61,7 +63,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     return req.ip || req.socket?.remoteAddress || 'unknown';
   }
 
-  protected async throwThrottlingException(): Promise<void> {
+  protected throwThrottlingException(): Promise<void> {
     throw new ThrottlerException('请求过于频繁，请稍后再试');
   }
 }

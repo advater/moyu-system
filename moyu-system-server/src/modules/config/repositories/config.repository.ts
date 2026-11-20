@@ -14,7 +14,7 @@ export class ConfigRepository {
 
   async selectById(id: number): Promise<ConfigDO | null> {
     const row = await this.prisma.sysConfig.findUnique({ where: { id } });
-    return (row as ConfigDO | null) ?? null;
+    return (row) ?? null;
   }
 
   async selectPage(
@@ -38,14 +38,14 @@ export class ConfigRepository {
     return this.prisma.sysConfig.findMany({
       where,
       orderBy: { id: 'asc' },
-    }) as unknown as Promise<ConfigDO[]>;
+    });
   }
 
   async selectByUnique(
     where: Prisma.SysConfigWhereInput,
   ): Promise<ConfigDO | null> {
     const row = await this.prisma.sysConfig.findFirst({ where });
-    return (row as ConfigDO | null) ?? null;
+    return (row) ?? null;
   }
 
   async insert(

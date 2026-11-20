@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "antd";
 import type { MenuProps } from "antd";
@@ -88,10 +88,15 @@ export default function SiderBarNav({ nodes }: { nodes?: IMenuItem[] }) {
 
   const items = useMemo(() => toMenuItems(menuData), [menuData]);
   const [openKeys, setOpenKeys] = useState<string[]>(() => findAncestorPaths(menuData, currentPath));
-
-  useEffect(() => {
+  const [openSync, setOpenSync] = useState({ currentPath, menuData, uniqueOpened });
+  if (
+    currentPath !== openSync.currentPath ||
+    menuData !== openSync.menuData ||
+    uniqueOpened !== openSync.uniqueOpened
+  ) {
+    setOpenSync({ currentPath, menuData, uniqueOpened });
     setOpenKeys(findAncestorPaths(menuData, currentPath));
-  }, [currentPath, menuData, uniqueOpened]);
+  }
 
   const handleOpenChange: MenuProps["onOpenChange"] = (keys) => {
     if (!uniqueOpened) {

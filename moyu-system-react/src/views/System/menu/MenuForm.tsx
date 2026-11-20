@@ -14,11 +14,16 @@ export default function MenuForm({
   const [menuTree, setMenuTree] = useState<any[]>([]);
   const [statusLocked, setStatusLocked] = useState(false);
   const menuType = Form.useWatch("type", form);
+  const openKey = `${open}:${type}:${id ?? ""}:${parentId ?? ""}`;
+  const [seenOpenKey, setSeenOpenKey] = useState(openKey);
+  if (openKey !== seenOpenKey) {
+    setSeenOpenKey(openKey);
+    if (open) setStatusLocked(false);
+  }
 
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    setStatusLocked(false);
     const load = async () => {
       const rows = await MenuApi.getSimpleMenusList();
       const tree = handleTree(rows || []);

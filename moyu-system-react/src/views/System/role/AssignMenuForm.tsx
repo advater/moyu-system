@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Modal, Space, Switch, Tag, Tree, message } from "antd";
 import type { RoleVO } from "@/api/system/role";
 import * as MenuApi from "@/api/system/menu";
@@ -8,39 +9,49 @@ import { handleTree } from "@/utils/tree";
 export default function AssignMenuForm({
   open, role, onClose, onSuccess,
 }: { open: boolean; role: RoleVO | null; onClose: () => void; onSuccess: () => void }) {
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && role ? String(role.id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   const [treeData, setTreeData] = useState<any[]>([]);
   const [checkedKeys, setCheckedKeys] = useState<number[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
   const [checkAll, setCheckAll] = useState(false);
   const [expandAll, setExpandAll] = useState(false);
+  const [seenPendingKey, setSeenPendingKey] = useState(pendingKey);
+  if (pendingKey !== seenPendingKey) {
+    setSeenPendingKey(pendingKey);
+    if (pendingKey) {
+      setCheckAll(false);
+      setExpandAll(false);
+    }
+  }
 
   const collectIds = (nodes: any[]): number[] =>
     nodes.flatMap((n) => [n.id, ...(n.children ? collectIds(n.children) : [])]);
 
   useEffect(() => {
     if (!open || !role) return;
-    setCheckAll(false);
-    setExpandAll(false);
-    setLoading(true);
+    const key = String(role.id);
+    let cancelled = false;
     Promise.all([MenuApi.getSimpleMenusList(), PermissionApi.getRoleMenuList(role.id)])
       .then(([menus, menuIds]) => {
+        if (cancelled) return;
         const tree = handleTree(menus || []);
         setTreeData(tree);
         setCheckedKeys(menuIds || []);
       })
-      .finally(() => setLoading(false));
-  }, [open, role]);
+      .finally(() => { if (!cancelled) completePending(key); });
+    return () => { cancelled = true; };
+  }, [open, role, completePending]);
 
   const submit = async () => {
     if (!role) return;
-    setLoading(true);
+    setSubmitting(true);
     try {
       await PermissionApi.assignRoleMenu({ roleId: role.id, menuIds: checkedKeys });
       message.success("修改成功");
       onSuccess();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 

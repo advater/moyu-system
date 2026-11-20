@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, InputNumber, Modal, Radio, Select, message } from "antd";
 import * as DictDataApi from "@/api/system/dict/dict.data";
 import { DICT_TYPE, getIntDictOptions } from "@/utils/dict";
@@ -17,27 +18,30 @@ export default function DictDataForm({
   open, type, id, dictType, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; dictType: string; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
 
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     if (type === "update" && id) {
-      setLoading(true);
-      DictDataApi.getDictData(id).then((data) => form.setFieldsValue(data)).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      DictDataApi.getDictData(id).then((data) => form.setFieldsValue(data)).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ dictType, status: CommonStatusEnum.ENABLE, sort: 0 });
     }
-  }, [open, type, id, dictType]);
+  }, [open, type, id, dictType, completePending]);
 
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") { await DictDataApi.createDictData(values); message.success("新增成功"); }
       else { await DictDataApi.updateDictData({ ...values, id }); message.success("修改成功"); }
       onSuccess();
-    } finally { setLoading(false); }
+    } finally { setSubmitting(false); }
   };
 
   return (

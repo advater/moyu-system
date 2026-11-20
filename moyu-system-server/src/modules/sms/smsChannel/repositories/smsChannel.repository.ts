@@ -78,7 +78,7 @@ export class SmsChannelRepository {
       where,
       select: this.simpleSelect,
       orderBy: { createTime: 'desc' },
-    }) as Promise<Array<Pick<SmsChannelDO, 'id' | 'signature' | 'code'>>>;
+    });
   }
 
   /**

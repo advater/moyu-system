@@ -31,7 +31,14 @@ export function useMenuPage() {
   };
 
   useEffect(() => {
-    getList();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) void getList();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleQuery = () => {

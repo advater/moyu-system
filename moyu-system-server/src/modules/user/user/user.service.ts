@@ -26,6 +26,7 @@ import { formatDate } from '@/utils/date';
 import { toIntArray } from '@/utils/to-positive-int';
 import {
   buildExcelExport,
+  excelCellToString,
   ExcelExportResult,
   EXCEL_MAX_ROWS,
 } from '@/utils/excel-export';
@@ -517,7 +518,7 @@ export class UserService {
     const headerRow = sheet.getRow(1);
     const headerIndex = new Map<string, number>();
     headerRow.eachCell((cell, col) => {
-      const text = String(cell.value ?? '').trim();
+      const text = excelCellToString(cell.value).trim();
       if (text) headerIndex.set(text, col);
     });
     const col = (name: string) => headerIndex.get(name);
@@ -546,38 +547,35 @@ export class UserService {
     const maxRow = Math.min(sheet.rowCount, EXCEL_MAX_ROWS + 1);
     for (let r = 2; r <= maxRow; r++) {
       const row = sheet.getRow(r);
-      const username = String(
-        row.getCell(col('用户账号') ?? 1).value ?? '',
+      const username = excelCellToString(
+        row.getCell(col('用户账号') ?? 1).value,
       ).trim();
       if (!username) {
         continue;
       }
-      const nickname = String(
-        row.getCell(col('用户昵称') ?? 2).value ?? username,
+      const nickname =
+        excelCellToString(row.getCell(col('用户昵称') ?? 2).value).trim() ||
+        username;
+      const deptRaw = excelCellToString(
+        row.getCell(col('部门编号') ?? 3).value,
       ).trim();
-      const deptRaw = row.getCell(col('部门编号') ?? 3).value;
-      const email = String(row.getCell(col('用户邮箱') ?? 4).value ?? '').trim();
-      const mobile = String(
-        row.getCell(col('手机号码') ?? 5).value ?? '',
+      const email = excelCellToString(
+        row.getCell(col('用户邮箱') ?? 4).value,
       ).trim();
-      const sexRaw = row.getCell(col('用户性别') ?? 6).value;
-      const statusRaw = row.getCell(col('账号状态') ?? 7).value;
+      const mobile = excelCellToString(
+        row.getCell(col('手机号码') ?? 5).value,
+      ).trim();
+      const sexRaw = excelCellToString(
+        row.getCell(col('用户性别') ?? 6).value,
+      ).trim();
+      const statusRaw = excelCellToString(
+        row.getCell(col('账号状态') ?? 7).value,
+      ).trim();
 
       try {
-        const deptId =
-          deptRaw !== undefined && deptRaw !== null && String(deptRaw).trim() !== ''
-            ? Number(deptRaw)
-            : undefined;
-        const sex =
-          sexRaw !== undefined && sexRaw !== null && String(sexRaw).trim() !== ''
-            ? Number(sexRaw)
-            : undefined;
-        const status =
-          statusRaw !== undefined &&
-          statusRaw !== null &&
-          String(statusRaw).trim() !== ''
-            ? Number(statusRaw)
-            : 1;
+        const deptId = deptRaw !== '' ? Number(deptRaw) : undefined;
+        const sex = sexRaw !== '' ? Number(sexRaw) : undefined;
+        const status = statusRaw !== '' ? Number(statusRaw) : 1;
 
         const exists = await this.userRepository.selectByUnique({
           username,

@@ -24,7 +24,7 @@ export const isJsonFn = function (data: string) {
     } else {
       return false;
     }
-  } catch (e) {
+  } catch {
     return false;
   }
 };

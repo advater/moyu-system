@@ -79,7 +79,7 @@ export class TenantPackageService {
       remark: req.remark ?? tenantPackage.remark,
       menuIds: req.menuIds,
       ...(req.features !== undefined
-        ? { features: req.features as object }
+        ? { features: req.features }
         : {}),
     });
     if (ok) {
@@ -198,7 +198,7 @@ export class TenantPackageService {
     resp.menuIds = item.menuIds ?? [];
     resp.features =
       item.features && typeof item.features === 'object'
-        ? (item.features as Record<string, number | string | boolean>)
+        ? (item.features)
         : undefined;
     resp.createTime = formatDate(item.createTime);
     return resp;

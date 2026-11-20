@@ -82,7 +82,7 @@ export async function copyToClipboard(text: string) {
     }
 
     ssoMessage("Copy Success");
-  } catch (error) {
+  } catch {
     const textArea = document.createElement("textarea");
     textArea.value = text;
     document.body.appendChild(textArea);
@@ -91,7 +91,7 @@ export async function copyToClipboard(text: string) {
     try {
       document.execCommand("copy");
       ssoMessage("Copy Success");
-    } catch (error) {
+    } catch {
       ssoMessage("Copy Failed");
     }
     document.body.removeChild(textArea);

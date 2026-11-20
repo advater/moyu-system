@@ -10,7 +10,7 @@ export class ApiAccessLogRepository {
 
   async selectById(id: number): Promise<ApiAccessLogDO | null> {
     const row = await this.prisma.sysApiAccessLog.findUnique({ where: { id } });
-    return (row as ApiAccessLogDO | null) ?? null;
+    return (row) ?? null;
   }
 
   async selectPage(

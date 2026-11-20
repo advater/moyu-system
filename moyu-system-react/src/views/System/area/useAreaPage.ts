@@ -23,7 +23,14 @@ export function useAreaPage() {
   }, []);
 
   useEffect(() => {
-    loadTree();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) void loadTree();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadTree]);
 
   const openIp = () => {

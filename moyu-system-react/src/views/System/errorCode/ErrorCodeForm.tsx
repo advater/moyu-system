@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, InputNumber, Modal, Select, message } from "antd";
 import * as ErrorCodeApi from "@/api/system/errorCode";
 
@@ -6,20 +7,23 @@ export default function ErrorCodeForm({
   open, type, id, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     if (type === "update" && id) {
-      setLoading(true);
-      ErrorCodeApi.getErrorCode(id).then((data) => form.setFieldsValue(data)).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      ErrorCodeApi.getErrorCode(id).then((data) => form.setFieldsValue(data)).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ type: 2, applicationName: "moyu-system-server" });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") {
         await ErrorCodeApi.createErrorCode(values);
@@ -30,7 +34,7 @@ export default function ErrorCodeForm({
       }
       onSuccess();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
   return (

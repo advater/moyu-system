@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, InputNumber, Modal, Switch, message } from "antd";
 import * as MailAccountApi from "@/api/system/mail/account";
 
@@ -6,25 +7,28 @@ export default function MailAccountForm({
   open, type, id, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     if (type === "update" && id) {
-      setLoading(true);
-      MailAccountApi.getMailAccount(id).then((data) => form.setFieldsValue({ ...data, password: undefined })).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      MailAccountApi.getMailAccount(id).then((data) => form.setFieldsValue({ ...data, password: undefined })).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ sslEnable: true, starttlsEnable: false, port: 465 });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") { await MailAccountApi.createMailAccount(values); message.success("新增成功"); }
       else { await MailAccountApi.updateMailAccount({ ...values, id }); message.success("修改成功"); }
       onSuccess();
-    } finally { setLoading(false); }
+    } finally { setSubmitting(false); }
   };
   return (
     <Modal open={open} title={type === "create" ? "新增邮箱账号" : "修改邮箱账号"} onCancel={onClose} onOk={submit} confirmLoading={loading} destroyOnHidden>

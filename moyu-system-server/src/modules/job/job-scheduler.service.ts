@@ -57,7 +57,6 @@ export class JobSchedulerService implements OnModuleInit {
   /** 校验 cron；非法则抛错 */
   assertCronValid(expression: string): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const job = new CronJob(expression, () => {});
       job.stop();
     } catch {

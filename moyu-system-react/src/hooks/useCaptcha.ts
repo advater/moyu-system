@@ -27,7 +27,14 @@ export function useCaptcha(force = false) {
   }, [enabled]);
 
   useEffect(() => {
-    void refresh().catch(() => {});
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) void refresh().catch(() => {});
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [refresh]);
 
   return { enabled, image, uuid, refresh };

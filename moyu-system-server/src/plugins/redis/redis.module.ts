@@ -28,7 +28,7 @@ function formatRedisError(err: unknown): string {
   try {
     return JSON.stringify(err);
   } catch {
-    return String(err);
+    return 'unserializable redis error';
   }
 }
 

@@ -20,7 +20,7 @@ describe('persist-api-error-log', () => {
   it('persistApiErrorLog writes once per request', async () => {
     const created: unknown[] = [];
     const service = {
-      createQuiet: async (data: unknown) => {
+      createQuiet: (data: unknown) => {
         created.push(data);
       },
     };

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, InputNumber, Modal, Select, message } from "antd";
 import * as PostApi from "@/api/system/post";
 import { DICT_TYPE, getIntDictOptions } from "@/utils/dict";
@@ -8,27 +9,30 @@ export default function PostForm({
   open, type, id, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
 
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     if (type === "update" && id) {
-      setLoading(true);
-      PostApi.getPost(id).then((data) => form.setFieldsValue(data)).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      PostApi.getPost(id).then((data) => form.setFieldsValue(data)).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ status: CommonStatusEnum.ENABLE, sort: 0 });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
 
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") { await PostApi.createPost(values); message.success("新增成功"); }
       else { await PostApi.updatePost({ ...values, id }); message.success("修改成功"); }
       onSuccess();
-    } finally { setLoading(false); }
+    } finally { setSubmitting(false); }
   };
 
   return (

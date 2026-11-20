@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, InputNumber, Modal, Select, TreeSelect, message } from "antd";
 import * as DeptApi from "@/api/system/dept";
 import * as UserApi from "@/api/system/user";
@@ -10,7 +11,8 @@ export default function DeptForm({
   open, type, id, parentId, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; parentId?: number; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   const [deptTree, setDeptTree] = useState<any[]>([]);
   const [userList, setUserList] = useState<UserApi.UserVO[]>([]);
 
@@ -22,16 +24,18 @@ export default function DeptForm({
       setUserList(users || []);
     });
     if (type === "update" && id) {
-      setLoading(true);
-      DeptApi.getDept(id).then((data) => form.setFieldsValue(data)).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      DeptApi.getDept(id).then((data) => form.setFieldsValue(data)).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ parentId: parentId ?? 0, status: CommonStatusEnum.ENABLE, sort: 0 });
     }
-  }, [open, type, id, parentId]);
+  }, [open, type, id, parentId, completePending]);
 
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") {
         await DeptApi.createDept(values);
@@ -42,7 +46,7 @@ export default function DeptForm({
       }
       onSuccess();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 

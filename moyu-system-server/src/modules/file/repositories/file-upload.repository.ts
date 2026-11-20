@@ -84,10 +84,8 @@ export class FileUploadRepository {
       data: {
         ...data,
         size: BigInt(data.size),
-        uploadedIndexes: data.uploadedIndexes as Prisma.InputJsonValue,
-        partEtags: (data.partEtags ?? undefined) as
-          | Prisma.InputJsonValue
-          | undefined,
+        uploadedIndexes: data.uploadedIndexes,
+        partEtags: (data.partEtags ?? undefined),
       },
     });
     return toDO(row);
@@ -107,7 +105,7 @@ export class FileUploadRepository {
       where: { uploadId },
       data: {
         ...(data.uploadedIndexes
-          ? { uploadedIndexes: data.uploadedIndexes as Prisma.InputJsonValue }
+          ? { uploadedIndexes: data.uploadedIndexes }
           : {}),
         ...(data.partEtags !== undefined
           ? {

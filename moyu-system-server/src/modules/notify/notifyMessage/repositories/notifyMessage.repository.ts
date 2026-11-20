@@ -67,9 +67,9 @@ export class NotifyMessageRepository {
         templateType: data.templateType,
         templateNickname: data.templateNickname ?? null,
         templateContent: data.templateContent,
-        templateParams: (data.templateParams ??
-          {}) as unknown as Prisma.InputJsonValue,
-      }) as Prisma.SysNotifyMessageUncheckedCreateInput,
+        templateParams: data.templateParams ??
+          {},
+      }),
     });
     return row.id;
   }

@@ -25,6 +25,8 @@ export class PrismaService
     const adapter = new PrismaMariaDb(process.env.DATABASE_URL ?? '');
     super({ adapter });
 
+    // $extends callbacks do not receive the service as `this`.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const client = this;
 
     const extended = this.$extends({

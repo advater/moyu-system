@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, Modal, Select, TreeSelect, message } from "antd";
 import * as UserApi from "@/api/system/user";
 import * as DeptApi from "@/api/system/dept";
@@ -21,7 +22,8 @@ export default function UserForm({
   onSuccess: () => void;
 }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   const [deptTree, setDeptTree] = useState<any[]>([]);
   const [postList, setPostList] = useState<PostApi.PostVO[]>([]);
 
@@ -35,18 +37,20 @@ export default function UserForm({
       })
       .catch(() => {});
     if (type === "update" && id) {
-      setLoading(true);
+      const key = String(id);
+      let cancelled = false;
       UserApi.getUser(id)
         .then((data) => form.setFieldsValue(data))
-        .finally(() => setLoading(false));
+        .finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ status: CommonStatusEnum.ENABLE });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
 
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") {
         await UserApi.createUser(values);
@@ -57,7 +61,7 @@ export default function UserForm({
       }
       onSuccess();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 

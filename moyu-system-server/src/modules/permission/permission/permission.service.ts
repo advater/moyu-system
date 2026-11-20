@@ -124,7 +124,7 @@ export class PermissionService {
         ...new Set(
           menus
             .filter((menu) => menu.type === 3 && menu.permission)
-            .map((menu) => menu.permission!),
+            .map((menu) => menu.permission),
         ),
       ];
       return { roles, permissions, isSuperAdmin: true };
@@ -144,7 +144,7 @@ export class PermissionService {
       ...new Set(
         menus
           .filter((menu) => menu.type === 3 && menu.permission)
-          .map((menu) => menu.permission!),
+          .map((menu) => menu.permission),
       ),
     ];
     return { roles, permissions, isSuperAdmin: false };

@@ -79,9 +79,9 @@ export class JwtGuard implements CanActivate, OnModuleInit {
         userType: tokenRecord.userType,
         tenantId: tokenRecord.tenantId ?? '0',
         clientId: tokenRecord.clientId,
-        scopes: (tokenRecord.scopes as string[]) ?? [],
+        scopes: (tokenRecord.scopes) ?? [],
         accessToken: token,
-        userInfo: tokenRecord.userInfo as Record<string, string> | undefined,
+        userInfo: tokenRecord.userInfo,
       };
       (request as any).loginUser = loginUser;
       (request as any).user = loginUser;
@@ -108,7 +108,7 @@ export class JwtGuard implements CanActivate, OnModuleInit {
         userType: tokenRecord.userType,
         tenantId: tokenRecord.tenantId ?? '0',
         clientId: tokenRecord.clientId,
-        scopes: (tokenRecord.scopes as string[]) ?? [],
+        scopes: (tokenRecord.scopes) ?? [],
         accessToken: token,
       };
       if (client) {

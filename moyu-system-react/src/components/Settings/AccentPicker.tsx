@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ACCENT_COLORS, useAppStore } from "@/store/stores/app";
 import "./AccentPicker.scss";
 
@@ -6,10 +6,11 @@ export default function AccentPicker() {
   const { theme, setAccent } = useAppStore();
   const value = theme.elColorPrimary;
   const [text, setText] = useState(value);
-
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setText(value);
-  }, [value]);
+  }
 
   return (
     <div className="accent-picker">

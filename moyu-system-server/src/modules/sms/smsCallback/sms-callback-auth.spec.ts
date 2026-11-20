@@ -2,6 +2,7 @@ import {
   assertSmsCallbackToken,
   SmsCallbackAuthError,
 } from './sms-callback-auth';
+import { createHmac } from 'node:crypto';
 import { assertSmsCallbackHmac } from './sms-callback-hmac';
 
 describe('assertSmsCallbackToken', () => {
@@ -59,7 +60,6 @@ describe('assertSmsCallbackHmac', () => {
   });
 
   it('HMAC 匹配 → ok', () => {
-    const { createHmac } = require('node:crypto') as typeof import('node:crypto');
     const secret = 'hmac-secret';
     const body = '{"ok":true}';
     const sig = createHmac('sha256', secret).update(body).digest('hex');

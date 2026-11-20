@@ -256,7 +256,7 @@ export class RoleService {
       and.length === 0 ? {} : and.length === 1 ? and[0] : { AND: and };
     const { list, total } = await this.roleRepository.selectPage(
       { page: req.page, pageSize: req.pageSize },
-      where as Parameters<typeof this.roleRepository.selectPage>[1],
+      where,
     );
     return { list: list.map((role) => this.toResDTO(role)), total };
   }

@@ -64,8 +64,8 @@ POST /admin/auth/login  ──►  校验验证码、租户状态、密码
 
 ```bash
 npm install
-# 在 .env.development 或 .env.development.local 中填写
-# DATABASE_URL / JWT_SECRET / SESSION_SECRET
+# 在 .env.development.local 或本地 .env 中填写真实
+# DATABASE_URL / JWT_SECRET / SESSION_SECRET（不要写入已入库的 .env.development）
 npx prisma generate
 npx prisma migrate dev        # 空库；已有库见下方注意事项
 npm run start:dev

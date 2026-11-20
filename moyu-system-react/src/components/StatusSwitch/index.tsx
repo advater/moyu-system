@@ -42,7 +42,9 @@ export function useStatusChange<T extends Record<string, any>>(
   refresh: () => void,
 ) {
   return async (row: T, status: number) => {
-    const { children: _children, statusLocked: _statusLocked, ...rest } = row;
+    const rest = { ...row };
+    delete (rest as { children?: unknown }).children;
+    delete (rest as { statusLocked?: unknown }).statusLocked;
     await update({ ...(rest as T), status });
     refresh();
   };

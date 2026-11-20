@@ -53,44 +53,61 @@ export default function FilePreview({
   onClose: () => void;
 }) {
   const kind = row ? previewKind(row) : "other";
-  const [mediaUrl, setMediaUrl] = useState<string>();
-  const [text, setText] = useState<string>();
-  const [error, setError] = useState<string>();
-  const [loading, setLoading] = useState(false);
+  const rowId = row?.id ?? null;
+  const [view, setView] = useState<{
+    rowId: number | null;
+    mediaUrl?: string;
+    text?: string;
+    error?: string;
+    loading: boolean;
+  }>({ rowId: null, loading: false });
+
+  if (rowId !== view.rowId) {
+    setView({
+      rowId,
+      mediaUrl: undefined,
+      text: undefined,
+      error: undefined,
+      loading: Boolean(row) && kind !== "other",
+    });
+  }
 
   useEffect(() => {
-    if (!row) {
-      setMediaUrl(undefined);
-      setText(undefined);
-      setError(undefined);
-      return;
-    }
+    if (!row || kind === "other") return;
     let cancelled = false;
-    setLoading(true);
-    setError(undefined);
-    setText(undefined);
-    setMediaUrl(undefined);
     (async () => {
       try {
-        if (kind === "other") return;
         const issued = await getPreviewTicket(row.id);
         if (cancelled) return;
         const url = previewMediaUrl(row.id, issued.ticket);
         if (kind === "text") {
-          setText(await readTextHead(url));
-        } else {
-          setMediaUrl(url);
+          const text = await readTextHead(url);
+          if (!cancelled) {
+            setView((current) =>
+              current.rowId === row.id ? { ...current, text, loading: false } : current,
+            );
+          }
+        } else if (!cancelled) {
+          setView((current) =>
+            current.rowId === row.id ? { ...current, mediaUrl: url, loading: false } : current,
+          );
         }
       } catch (err: any) {
-        if (!cancelled) setError(err?.message || "无法预览");
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setView((current) =>
+            current.rowId === row.id
+              ? { ...current, error: err?.message || "无法预览", loading: false }
+              : current,
+          );
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [row, kind]);
+
+  const { mediaUrl, text, error, loading } = view;
 
   return (
     <Modal

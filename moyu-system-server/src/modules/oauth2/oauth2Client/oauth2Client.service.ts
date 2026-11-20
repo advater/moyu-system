@@ -49,12 +49,12 @@ export class OAuth2ClientService {
       accessTokenValiditySeconds: req.accessTokenValiditySeconds,
       refreshTokenValiditySeconds: req.refreshTokenValiditySeconds,
       // Json 数组字段：未传一律给空数组，保证返回结构稳定
-      redirectUris: [] as any,
-      authorizedGrantTypes: (req.authorizedGrantTypes ?? []) as any,
-      scopes: (req.scopes ?? []) as any,
-      autoApproveScopes: (req.autoApproveScopes ?? []) as any,
-      authorities: (req.authorities ?? []) as any,
-      resourceIds: (req.resourceIds ?? []) as any,
+      redirectUris: [],
+      authorizedGrantTypes: (req.authorizedGrantTypes ?? []),
+      scopes: (req.scopes ?? []),
+      autoApproveScopes: (req.autoApproveScopes ?? []),
+      authorities: (req.authorities ?? []),
+      resourceIds: (req.resourceIds ?? []),
       additionalInformation: req.additionalInformation ?? null,
     });
     return created.id;
@@ -97,11 +97,11 @@ export class OAuth2ClientService {
       status: req.status,
       accessTokenValiditySeconds: req.accessTokenValiditySeconds,
       refreshTokenValiditySeconds: req.refreshTokenValiditySeconds,
-      authorizedGrantTypes: (req.authorizedGrantTypes ?? []) as any,
-      scopes: (req.scopes ?? []) as any,
-      autoApproveScopes: (req.autoApproveScopes ?? []) as any,
-      authorities: (req.authorities ?? []) as any,
-      resourceIds: (req.resourceIds ?? []) as any,
+      authorizedGrantTypes: (req.authorizedGrantTypes ?? []),
+      scopes: (req.scopes ?? []),
+      autoApproveScopes: (req.autoApproveScopes ?? []),
+      authorities: (req.authorities ?? []),
+      resourceIds: (req.resourceIds ?? []),
       additionalInformation: req.additionalInformation ?? null,
     });
   }
@@ -165,12 +165,12 @@ export class OAuth2ClientService {
     vo.status = item.status;
     vo.accessTokenValiditySeconds = item.accessTokenValiditySeconds;
     vo.refreshTokenValiditySeconds = item.refreshTokenValiditySeconds;
-    vo.redirectUris = (item.redirectUris as unknown as string[]) ?? [];
-    vo.authorizedGrantTypes = (item.authorizedGrantTypes as unknown as string[]) ?? [];
-    vo.scopes = (item.scopes as unknown as string[]) ?? [];
-    vo.autoApproveScopes = (item.autoApproveScopes as unknown as string[]) ?? [];
-    vo.authorities = (item.authorities as unknown as string[]) ?? [];
-    vo.resourceIds = (item.resourceIds as unknown as string[]) ?? [];
+    vo.redirectUris = (item.redirectUris) ?? [];
+    vo.authorizedGrantTypes = (item.authorizedGrantTypes) ?? [];
+    vo.scopes = (item.scopes) ?? [];
+    vo.autoApproveScopes = (item.autoApproveScopes) ?? [];
+    vo.authorities = (item.authorities) ?? [];
+    vo.resourceIds = (item.resourceIds) ?? [];
     vo.additionalInformation = item.additionalInformation ?? '';
     vo.createTime = formatDate(item.createTime);
     return vo;

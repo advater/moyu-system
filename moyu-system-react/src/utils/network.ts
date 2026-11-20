@@ -27,9 +27,9 @@ export function getNetworkType(callback: TCallback) {
     (navigator as TNavigator).connection ||
     (navigator as TNavigator).mozConnection ||
     (navigator as TNavigator).webkitConnection;
-  let connectionType = "unknown";
   if (connection) {
     const { effectiveType } = connection;
+    let connectionType: string;
     switch (effectiveType) {
       case "2g":
       case "3g":

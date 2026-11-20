@@ -56,7 +56,14 @@ export function useUserPage() {
   }, [queryParams, setTotal]);
 
   useEffect(() => {
-    getList();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) void getList();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [pageData.currentPage, pageData.pageSize, deptId, searchTick]);
 
   useEffect(() => {

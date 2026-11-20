@@ -51,13 +51,13 @@ export class Protocol {
   private _handleProtocolMessage(message: Record<string, any>): void {
     switch (message.type) {
       case ProtocolMsgType.HEARTBEAT: // 处理被动心跳消息
-        this._handleHeartbeat(message);
+        this._handleHeartbeat();
         break;
       case ProtocolMsgType.ACK: // 处理ACK确认消息
         this._handleAck(message);
         break;
       case ProtocolMsgType.PONG: // 处理主动心跳消息
-        this._handlePong(message);
+        this._handlePong();
         break;
       // 其他协议消息在这扩展
       default:
@@ -74,7 +74,7 @@ export class Protocol {
   /**
    * 处理被动心跳消息
    */
-  private _handleHeartbeat(_message: Record<string, any>): void {
+  private _handleHeartbeat(): void {
     this.lastHeartbeatTime = Date.now();
 
     this.transport.send({
@@ -88,7 +88,7 @@ export class Protocol {
   /**
    * 处理主动心跳消息
    */
-  private _handlePong(_message: Record<string, any>): void {
+  private _handlePong(): void {
     const latency = Date.now() - this.lastHeartbeatTime;
     this.lastHeartbeatTime = Date.now();
     this.emit("pong", latency);

@@ -216,7 +216,11 @@ export class CatchExceptionFilter<T = unknown> implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     };
     // 401/403 是登录态过期或未登录，未读轮询等会反复打到，不要当系统异常刷 ERROR
-    if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
+    const quietStatuses: number[] = [
+      HttpStatus.UNAUTHORIZED,
+      HttpStatus.FORBIDDEN,
+    ];
+    if (quietStatuses.includes(status)) {
       this.logger.warn(payload);
       return;
     }

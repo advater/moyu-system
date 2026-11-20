@@ -54,7 +54,7 @@ export class DeptRepository {
       where,
       select: this.simpleSelect,
       orderBy: { sort: 'asc' },
-    }) as Promise<Array<Pick<DeptDO, 'id' | 'name' | 'parentId'>>>;
+    });
   }
 
   /**

@@ -166,7 +166,7 @@ export class DeptService {
   ): Promise<DeptResDTO[]> {
     const scoped = await this.applyDeptScope(loginUser, this.buildDeptWhere(req));
     const list = await this.deptRepository.selectList(
-      scoped as Parameters<typeof this.deptRepository.selectList>[0],
+      scoped,
     );
     return list.map((dept) => this.toResDTO(dept));
   }
@@ -229,7 +229,7 @@ export class DeptService {
   async getSimpleDeptList(loginUser?: LoginUser): Promise<DeptSimpleResDTO[]> {
     const scoped = await this.applyDeptScope(loginUser, { status: 1 });
     return this.deptRepository.selectSimpleList(
-      scoped as Parameters<typeof this.deptRepository.selectSimpleList>[0],
+      scoped,
     );
   }
 

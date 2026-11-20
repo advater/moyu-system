@@ -10,14 +10,14 @@ export class ErrorCodeRepository {
 
   async selectById(id: number): Promise<ErrorCodeDO | null> {
     const row = await this.prisma.sysErrorCode.findUnique({ where: { id } });
-    return (row as ErrorCodeDO | null) ?? null;
+    return (row) ?? null;
   }
 
   async selectByUnique(
     where: Prisma.SysErrorCodeWhereInput,
   ): Promise<ErrorCodeDO | null> {
     const row = await this.prisma.sysErrorCode.findFirst({ where });
-    return (row as ErrorCodeDO | null) ?? null;
+    return (row) ?? null;
   }
 
   async selectPage(

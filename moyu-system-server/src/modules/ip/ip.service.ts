@@ -31,7 +31,7 @@ export class IpService implements OnModuleInit {
   private ipSearcher: { search: (ip: string) => Ip2RegionResult } | null =
     null;
 
-  async onModuleInit() {
+  onModuleInit() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mod = require('ip2region') as {
@@ -84,7 +84,7 @@ export class IpService implements OnModuleInit {
   /**
    * 根据 IP 查询所在地区名称（省市区简写）
    */
-  async getAreaByIp(ip: string): Promise<string> {
+  getAreaByIp(ip: string): string {
     const clean = this.normalizeIp(ip);
     if (!clean) {
       return '';

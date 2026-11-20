@@ -41,7 +41,7 @@ export class AuthController {
 
   private clientMeta(request: FastifyRequest): AuthClientMeta {
     const ip =
-      requestIp.getClientIp(request as never) ||
+      requestIp.getClientIp(request) ||
       request.ip ||
       '';
     const userAgent = String(request.headers['user-agent'] || '');

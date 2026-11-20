@@ -160,7 +160,7 @@ export class FileService {
                 size: req.size,
                 hash: req.hash,
                 relativePath: existed.path,
-                writer: async () => undefined,
+                writer: () => Promise.resolve(),
               }),
           );
           return {
@@ -954,7 +954,7 @@ export class FileService {
       size: Number(session.size),
       hash: session.hash,
       relativePath: session.destPath,
-      writer: async () => undefined,
+      writer: () => Promise.resolve(),
       skipQuota: true,
     });
     await this.uploadRepository.updateByUploadId(session.uploadId, {

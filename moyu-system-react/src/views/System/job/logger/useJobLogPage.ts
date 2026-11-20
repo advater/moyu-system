@@ -18,16 +18,17 @@ export function useJobLogPage() {
     }),
   );
   const [detail, setDetail] = useState<JobLogVO | null>(null);
-  const seededRef = useRef(false);
+  const [seededJobId, setSeededJobId] = useState<string | null>(null);
   const skipJobIdFetch = useRef(true);
 
-  if (jobId && !seededRef.current) {
+  if (jobId && jobId !== seededJobId) {
     crud.form.setFieldsValue({ jobId: Number(jobId) });
-    seededRef.current = true;
+    setSeededJobId(jobId);
+  } else if (!jobId && seededJobId !== null) {
+    setSeededJobId(null);
   }
 
   useEffect(() => {
-    if (jobId) crud.form.setFieldsValue({ jobId: Number(jobId) });
     if (skipJobIdFetch.current) {
       skipJobIdFetch.current = false;
       return;

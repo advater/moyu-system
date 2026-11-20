@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, Modal, Select, message } from "antd";
 import type { UserVO } from "@/api/system/user";
 import * as RoleApi from "@/api/system/role";
@@ -16,31 +17,35 @@ export default function AssignRoleForm({
   onSuccess: () => void;
 }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && user ? String(user.id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   const [roleList, setRoleList] = useState<RoleApi.RoleVO[]>([]);
 
   useEffect(() => {
     if (!open || !user) return;
     form.setFieldsValue({ username: user.username, nickname: user.nickname, roleIds: [] });
-    setLoading(true);
+    const key = String(user.id);
+    let cancelled = false;
     Promise.all([RoleApi.getSimpleRoleList(), PermissionApi.getUserRoleList(user.id)])
       .then(([roles, roleIds]) => {
+        if (cancelled) return;
         setRoleList(roles || []);
         form.setFieldsValue({ roleIds: roleIds || [] });
       })
-      .finally(() => setLoading(false));
-  }, [open, user]);
+      .finally(() => { if (!cancelled) completePending(key); });
+    return () => { cancelled = true; };
+  }, [open, user, completePending]);
 
   const submit = async () => {
     if (!user) return;
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       await PermissionApi.assignUserRole({ userId: user.id, roleIds: values.roleIds || [] });
       message.success("修改成功");
       onSuccess();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 

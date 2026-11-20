@@ -27,7 +27,9 @@ export function toIntArray(value: unknown): number[] {
     ? value
     : typeof value === 'number'
       ? [value]
-      : String(value).split(/[,\s]+/);
+      : typeof value === 'string'
+        ? value.split(/[,\s]+/)
+        : [];
   const out: number[] = [];
   for (const part of parts) {
     if (part === '' || part == null) continue;

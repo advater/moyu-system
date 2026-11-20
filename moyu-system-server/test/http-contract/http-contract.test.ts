@@ -41,7 +41,7 @@ async function inject(
   });
   let json: JsonBody = {};
   try {
-    json = res.json() as JsonBody;
+    json = res.json();
   } catch {
     json = {};
   }
@@ -66,7 +66,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
   });
 
   it('无令牌访问受保护接口 → 401', async () => {
-    const res = await inject(app, { method: 'GET', url: '/user/page' });
+    const res = await inject(app, { method: 'GET', url: '/admin/user/page' });
     assert.equal(res.status, 401);
     assert.equal(res.json.errorCode, AuthError.INVALID_TOKEN);
   });
@@ -75,7 +75,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
     const staff = tokens.issue(USER.TENANT_A_SELF);
     const denied = await inject(app, {
       method: 'DELETE',
-      url: '/dept/delete',
+      url: '/admin/dept/delete',
       token: staff.accessToken,
       body: { id: DEPT.A_EMPTY },
     });
@@ -85,7 +85,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
     const superTok = tokens.issue(USER.SUPER_ADMIN);
     const allowed = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: superTok.accessToken,
     });
     assert.equal(allowed.status, 200);
@@ -96,7 +96,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
     const a = tokens.issue(USER.TENANT_A_ADMIN);
     const page = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: a.accessToken,
     });
     assert.equal(page.status, 200);
@@ -108,14 +108,14 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const getB = await inject(app, {
       method: 'GET',
-      url: `/user/get?id=${USER.TENANT_B_ADMIN}`,
+      url: `/admin/user/get?id=${USER.TENANT_B_ADMIN}`,
       token: a.accessToken,
     });
     assert.equal(getB.status, 404);
 
     const switchTenant = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: a.accessToken,
       tenantId: TENANT_B,
     });
@@ -127,7 +127,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
     const self = tokens.issue(USER.TENANT_A_SELF);
     const page = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: self.accessToken,
     });
     assert.equal(page.status, 200);
@@ -139,7 +139,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const peer = await inject(app, {
       method: 'GET',
-      url: `/user/get?id=${USER.TENANT_A_ADMIN}`,
+      url: `/admin/user/get?id=${USER.TENANT_A_ADMIN}`,
       token: self.accessToken,
     });
     assert.equal(peer.status, 403);
@@ -151,7 +151,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
     const admin = tokens.issue(USER.TENANT_A_ADMIN);
     const logout = await inject(app, {
       method: 'PUT',
-      url: '/oauth2-token/force-logout',
+      url: '/admin/oauth2-token/force-logout',
       token: admin.accessToken,
       body: { userId: USER.TENANT_A_SELF },
     });
@@ -160,7 +160,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const after = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: victim.accessToken,
     });
     assert.equal(after.status, 401);
@@ -171,7 +171,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
     const admin = tokens.issue(USER.TENANT_A_ADMIN);
     const children = await inject(app, {
       method: 'DELETE',
-      url: '/dept/delete',
+      url: '/admin/dept/delete',
       token: admin.accessToken,
       body: { id: DEPT.A_ROOT },
     });
@@ -180,7 +180,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const users = await inject(app, {
       method: 'DELETE',
-      url: '/dept/delete',
+      url: '/admin/dept/delete',
       token: admin.accessToken,
       body: { id: DEPT.A_CHILD },
     });
@@ -189,7 +189,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const scoped = await inject(app, {
       method: 'DELETE',
-      url: '/dept/delete',
+      url: '/admin/dept/delete',
       token: admin.accessToken,
       body: { id: DEPT.A_SCOPED },
     });
@@ -198,7 +198,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const ok = await inject(app, {
       method: 'DELETE',
-      url: '/dept/delete',
+      url: '/admin/dept/delete',
       token: admin.accessToken,
       body: { id: DEPT.A_EMPTY },
     });
@@ -213,14 +213,14 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const old = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: t1.accessToken,
     });
     assert.equal(old.status, 401);
 
     const keep = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: t3.accessToken,
     });
     assert.equal(keep.status, 200);
@@ -229,7 +229,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
     const mcp = tokens.issue(USER.MUST_CHANGE);
     const blocked = await inject(app, {
       method: 'GET',
-      url: '/user/page',
+      url: '/admin/user/page',
       token: mcp.accessToken,
     });
     assert.equal(blocked.status, 403);
@@ -237,7 +237,7 @@ describe('HTTP contract (guards + tenant + dataScope)', { timeout: 120000 }, () 
 
     const allowed = await inject(app, {
       method: 'GET',
-      url: '/user-profile/get',
+      url: '/admin/user-profile/get',
       token: mcp.accessToken,
     });
     assert.equal(allowed.status, 200);

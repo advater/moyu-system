@@ -10,7 +10,7 @@ export class ApiErrorLogRepository {
 
   async selectById(id: number): Promise<ApiErrorLogDO | null> {
     const row = await this.prisma.sysApiErrorLog.findUnique({ where: { id } });
-    return (row as ApiErrorLogDO | null) ?? null;
+    return (row) ?? null;
   }
 
   async selectPage(

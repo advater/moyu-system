@@ -41,9 +41,16 @@ export default function MessageBell() {
 
   useEffect(() => {
     if (!message) return;
-    void loadCount();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) void loadCount();
+    })();
     const timer = window.setInterval(() => void loadCount(), 120000);
-    return () => window.clearInterval(timer);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [message]);
 
   if (!message) return null;

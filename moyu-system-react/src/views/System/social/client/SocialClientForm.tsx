@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, Modal, Select, message } from "antd";
 import { DICT_TYPE, getIntDictOptions } from "@/utils/dict";
 import { CommonStatusEnum } from "@/utils/constants";
@@ -8,27 +9,30 @@ export default function SocialClientForm({
   open, type, id, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   const socialType = Form.useWatch("socialType", form);
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     if (type === "update" && id) {
-      setLoading(true);
-      SocialClientApi.getSocialClient(id).then((data) => form.setFieldsValue({ ...data, clientSecret: undefined })).finally(() => setLoading(false));
+      const key = String(id);
+      let cancelled = false;
+      SocialClientApi.getSocialClient(id).then((data) => form.setFieldsValue({ ...data, clientSecret: undefined })).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ status: CommonStatusEnum.ENABLE, userType: 2, agentId: "0" });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       const payload = { ...values, agentId: values.agentId || "0" };
       if (type === "create") { await SocialClientApi.createSocialClient(payload); message.success("新增成功"); }
       else { await SocialClientApi.updateSocialClient({ ...payload, id }); message.success("修改成功"); }
       onSuccess();
-    } finally { setLoading(false); }
+    } finally { setSubmitting(false); }
   };
   return (
     <Modal open={open} title={type === "create" ? "新增社交客户端" : "修改社交客户端"} onCancel={onClose} onOk={submit} confirmLoading={loading} destroyOnHidden>

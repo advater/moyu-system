@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, InputNumber, Modal, Select, message } from "antd";
 import * as RoleApi from "@/api/system/role";
 import { DICT_TYPE, getIntDictOptions } from "@/utils/dict";
@@ -8,27 +9,36 @@ export default function RoleForm({
   open, type, id, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   const [builtin, setBuiltin] = useState(false);
+  const openKey = `${open}:${type}:${id ?? ""}`;
+  const [seenOpenKey, setSeenOpenKey] = useState(openKey);
+  if (openKey !== seenOpenKey) {
+    setSeenOpenKey(openKey);
+    if (open) setBuiltin(false);
+  }
 
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    setBuiltin(false);
     if (type === "update" && id) {
-      setLoading(true);
+      const key = String(id);
+      let cancelled = false;
       RoleApi.getRole(id).then((data) => {
+        if (cancelled) return;
         form.setFieldsValue(data);
         setBuiltin(data.type === SystemRoleTypeEnum.SYSTEM);
-      }).finally(() => setLoading(false));
+      }).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ status: CommonStatusEnum.ENABLE, sort: 0 });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
 
   const submit = async () => {
     const values = await form.validateFields();
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") {
         await RoleApi.createRole(values);
@@ -39,7 +49,7 @@ export default function RoleForm({
       }
       onSuccess();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 

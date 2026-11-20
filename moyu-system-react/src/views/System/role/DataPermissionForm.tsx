@@ -18,14 +18,20 @@ export default function DataPermissionForm({
   const [expandAll, setExpandAll] = useState(true);
   const [checkStrictly, setCheckStrictly] = useState(true);
   const [expandedKeys, setExpandedKeys] = useState<number[]>([]);
+  const [syncKey, setSyncKey] = useState({ open, role });
+  if (open !== syncKey.open || role !== syncKey.role) {
+    setSyncKey({ open, role });
+    if (open && role) {
+      setDataScope(role.dataScope);
+      setCheckedKeys(role.dataScopeDeptIds || []);
+    }
+  }
 
   const collectIds = (nodes: any[]): number[] =>
     nodes.flatMap((n) => [n.id, ...(n.children ? collectIds(n.children) : [])]);
 
   useEffect(() => {
     if (!open || !role) return;
-    setDataScope(role.dataScope);
-    setCheckedKeys(role.dataScopeDeptIds || []);
     DeptApi.getSimpleDeptList().then((rows) => {
       const tree = handleTree(rows || []);
       setTreeData(tree);

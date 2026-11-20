@@ -77,7 +77,7 @@ export class SmsChannelService {
       code: req.code,
       status: req.status,
       remark: req.remark ?? channel.remark,
-      apiKey: shouldKeepExistingSecret(req.apiKey) ? channel.apiKey : req.apiKey!,
+      apiKey: shouldKeepExistingSecret(req.apiKey) ? channel.apiKey : req.apiKey,
       apiSecret: shouldKeepExistingSecret(req.apiSecret)
         ? channel.apiSecret
         : (req.apiSecret ?? channel.apiSecret),

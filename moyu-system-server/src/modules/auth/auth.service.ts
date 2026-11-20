@@ -378,7 +378,7 @@ export class AuthService {
       ...new Set(
         menus
           .filter((menu) => menu.type === 3 && menu.permission)
-          .map((menu) => menu.permission!),
+          .map((menu) => menu.permission),
       ),
     ];
 
@@ -609,7 +609,7 @@ export class AuthService {
       parsed =
         typeof statePayload === 'string'
           ? JSON.parse(statePayload)
-          : (statePayload as { type?: number; tenantId?: string });
+          : (statePayload);
     } catch {
       throw new HttpException(
         AuthError.SOCIAL_STATE_INVALID,
@@ -702,7 +702,7 @@ export class AuthService {
     void (async () => {
       let location = '';
       try {
-        location = (await this.ipService.getAreaByIp(userIp)).slice(0, 128);
+        location = this.ipService.getAreaByIp(userIp).slice(0, 128);
       } catch {
         /* ignore */
       }

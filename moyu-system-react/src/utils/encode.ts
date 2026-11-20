@@ -31,7 +31,7 @@ export function isEncodingConsistent(str: string) {
     const encoded = encoder.encode(str);
     const decoded = decoder.decode(encoded);
     return decoded === str; // 判断转换前后是否一致
-  } catch (e) {
+  } catch {
     return false; // 转换失败说明编码不一致
   }
 }
@@ -49,7 +49,7 @@ export function hasGarbageCharacter(str: string) {
     const bytes = encoder.encode(str);
     decoder.decode(bytes);
     return false;
-  } catch (e) {
+  } catch {
     return true; // 解码失败说明存在乱码
   }
 }

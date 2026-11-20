@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePendingOpen } from "@/hooks/usePendingOpen";
 import { Form, Input, InputNumber, Modal, Radio, Select, message } from "antd";
 import * as TenantApi from "@/api/system/tenant";
 import * as TenantPackageApi from "@/api/system/tenantPackage";
@@ -9,7 +10,8 @@ export default function TenantForm({
   open, type, id, onClose, onSuccess,
 }: { open: boolean; type: "create" | "update"; id?: number; onClose: () => void; onSuccess: () => void }) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const pendingKey = open && type === "update" && id ? String(id) : null;
+  const { loading, setSubmitting, completePending } = usePendingOpen(pendingKey);
   const [packageList, setPackageList] = useState<TenantPackageApi.TenantPackageVO[]>([]);
 
   useEffect(() => {
@@ -17,7 +19,8 @@ export default function TenantForm({
     form.resetFields();
     TenantPackageApi.getTenantPackageList().then(setPackageList).catch(() => setPackageList([]));
     if (type === "update" && id) {
-      setLoading(true);
+      const key = String(id);
+      let cancelled = false;
       TenantApi.getTenant(id).then((data) => {
         form.setFieldsValue({
           ...data,
@@ -25,11 +28,12 @@ export default function TenantForm({
             ? String(data.expireTime).replace("T", " ").slice(0, 19)
             : undefined,
         });
-      }).finally(() => setLoading(false));
+      }).finally(() => { if (!cancelled) completePending(key); });
+      return () => { cancelled = true; };
     } else {
       form.setFieldsValue({ status: CommonStatusEnum.ENABLE, accountCount: 0 });
     }
-  }, [open, type, id]);
+  }, [open, type, id, completePending]);
 
   const submit = async () => {
     const values = await form.validateFields();
@@ -43,7 +47,7 @@ export default function TenantForm({
           ? values.websites.split(/[,，\s]+/).filter(Boolean)
           : values.websites,
     };
-    setLoading(true);
+    setSubmitting(true);
     try {
       if (type === "create") {
         await TenantApi.createTenant(payload);
@@ -54,7 +58,7 @@ export default function TenantForm({
       }
       onSuccess();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 

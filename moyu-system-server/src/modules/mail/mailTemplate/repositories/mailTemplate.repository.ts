@@ -78,7 +78,7 @@ export class MailTemplateRepository {
       where,
       select: this.simpleSelect,
       orderBy: { createTime: 'desc' },
-    }) as Promise<Array<Pick<MailTemplate, 'id' | 'name' | 'code'>>>;
+    });
   }
 
   /**

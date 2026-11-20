@@ -6,6 +6,7 @@
  */
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import type { RedisClientType } from 'redis';
+import { toPlainString } from '@/utils/to-plain-string';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
@@ -97,11 +98,9 @@ export class RedisService implements OnModuleDestroy {
       if (!this.isWrongType(error)) throw error;
       const legacy = await this.get<unknown>(key);
       await this.client.del(key);
-      const prev = Array.isArray(legacy)
-        ? legacy.map(String)
-        : legacy != null
-          ? [String(legacy)]
-          : [];
+      const prev = (Array.isArray(legacy) ? legacy : legacy != null ? [legacy] : [])
+        .map((item) => toPlainString(item))
+        .filter((item) => item !== '');
       if (prev.length) await this.client.sAdd(key, prev);
       await this.client.sAdd(key, member);
     }

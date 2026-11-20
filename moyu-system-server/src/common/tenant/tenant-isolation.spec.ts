@@ -54,10 +54,10 @@ describe('Tenant isolation contracts', () => {
     });
   });
 
-  it('nested run restores outer tenant after inner completes', async () => {
-    await TenantContext.run({ tenantId: 'outer', ignore: false }, async () => {
+  it('nested run restores outer tenant after inner completes', () => {
+    TenantContext.run({ tenantId: 'outer', ignore: false }, () => {
       expect(TenantContext.getTenantId()).toBe('outer');
-      await TenantContext.run({ tenantId: 'inner', ignore: false }, async () => {
+      TenantContext.run({ tenantId: 'inner', ignore: false }, () => {
         expect(TenantContext.getTenantId()).toBe('inner');
       });
       expect(TenantContext.getTenantId()).toBe('outer');

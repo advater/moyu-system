@@ -187,7 +187,7 @@ export class NotifyTemplateService {
       );
     }
     // 校验模版声明的参数是否都传了
-    const requiredKeys = (template.params ?? []) as string[];
+    const requiredKeys = (template.params ?? []);
     const params = req.templateParams ?? {};
     const missingKey = requiredKeys.find(
       (key) => !Object.prototype.hasOwnProperty.call(params, key),
@@ -252,7 +252,7 @@ export class NotifyTemplateService {
     resp.type = template.type;
     resp.nickname = template.nickname ?? '';
     resp.content = template.content;
-    resp.params = (template.params as string[] | null) ?? undefined;
+    resp.params = (template.params) ?? undefined;
     resp.status = template.status;
     resp.remark = template.remark ?? undefined;
     resp.createTime = formatDate(template.createTime);

@@ -61,15 +61,17 @@ export class LocalFileStorage implements FileStorage {
     return readFile(this.absolutePath(relativePath));
   }
 
-  async createReadStream(
+  createReadStream(
     relativePath: string,
     range?: ByteRange,
   ): Promise<Readable> {
     const abs = this.absolutePath(relativePath);
     if (range) {
-      return createReadStream(abs, { start: range.start, end: range.end });
+      return Promise.resolve(
+        createReadStream(abs, { start: range.start, end: range.end }),
+      );
     }
-    return createReadStream(abs);
+    return Promise.resolve(createReadStream(abs));
   }
 
   async head(relativePath: string): Promise<FileHead> {
@@ -85,8 +87,8 @@ export class LocalFileStorage implements FileStorage {
     return previewFileUrl(fileId);
   }
 
-  async getDownloadUrl(): Promise<string | null> {
-    return null;
+  getDownloadUrl(): Promise<string | null> {
+    return Promise.resolve(null);
   }
 
   async saveChunk(

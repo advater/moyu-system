@@ -19,14 +19,14 @@ export class JobRepository {
   async selectById(id: number): Promise<JobDO | null> {
     return this.runIgnore(async () => {
       const row = await this.prisma.sysJob.findUnique({ where: { id } });
-      return (row as JobDO | null) ?? null;
+      return (row) ?? null;
     });
   }
 
   async selectByName(name: string): Promise<JobDO | null> {
     return this.runIgnore(async () => {
       const row = await this.prisma.sysJob.findFirst({ where: { name } });
-      return (row as JobDO | null) ?? null;
+      return (row) ?? null;
     });
   }
 
@@ -54,7 +54,7 @@ export class JobRepository {
       return this.prisma.sysJob.findMany({
         where: { status: 1 },
         orderBy: { id: 'asc' },
-      }) as unknown as Promise<JobDO[]>;
+      });
     });
   }
 
@@ -109,7 +109,7 @@ export class JobLogRepository {
   async selectById(id: number): Promise<JobLogDO | null> {
     return this.runIgnore(async () => {
       const row = await this.prisma.sysJobLog.findUnique({ where: { id } });
-      return (row as JobLogDO | null) ?? null;
+      return (row) ?? null;
     });
   }
 

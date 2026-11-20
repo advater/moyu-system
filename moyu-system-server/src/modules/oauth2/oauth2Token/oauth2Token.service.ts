@@ -139,7 +139,7 @@ export class OAuth2TokenService {
         userType,
         clientId,
         familyId,
-        scopes: scopes?.length ? (scopes as any) : undefined,
+        scopes: scopes?.length ? (scopes) : undefined,
         expiresTime: new Date(now.getTime() + refreshSeconds * 1000),
       });
 
@@ -150,8 +150,8 @@ export class OAuth2TokenService {
         userId,
         userType,
         clientId,
-        scopes: scopes?.length ? (scopes as any) : undefined,
-        userInfo: userInfo ? (userInfo as any) : undefined,
+        scopes: scopes?.length ? (scopes) : undefined,
+        userInfo: userInfo ? (userInfo) : undefined,
         permVersion,
         expiresTime: new Date(now.getTime() + accessSeconds * 1000),
       });
@@ -416,7 +416,7 @@ export class OAuth2TokenService {
       refreshRecord.userType,
       refreshRecord.clientId,
       undefined,
-      refreshRecord.scopes as string[] | undefined,
+      refreshRecord.scopes,
       {
         tenantId: refreshRecord.tenantId,
         familyId: refreshRecord.familyId,

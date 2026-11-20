@@ -80,7 +80,14 @@ export function useProfile() {
   };
 
   useEffect(() => {
-    loadProfile();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) void loadProfile();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return {

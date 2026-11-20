@@ -47,3 +47,39 @@ export async function buildExcelExport(options: {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   };
 }
+/** 把 Excel 单元格值转成纯文本，避免对象被 stringify 成 [object Object] */
+export function excelCellToString(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : '';
+  }
+  if (typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value !== 'object') return '';
+
+  const cell = value as {
+    text?: unknown;
+    result?: unknown;
+    richText?: unknown;
+    error?: unknown;
+  };
+  if (Array.isArray(cell.richText)) {
+    return cell.richText
+      .map((part) =>
+        part && typeof part === 'object' && 'text' in part
+          ? excelCellToString((part as { text?: unknown }).text)
+          : '',
+      )
+      .join('');
+  }
+  if ('result' in cell && cell.result !== undefined) {
+    return excelCellToString(cell.result);
+  }
+  if (typeof cell.text === 'string') {
+    return cell.text;
+  }
+  return '';
+}
