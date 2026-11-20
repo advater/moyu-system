@@ -1,0 +1,51 @@
+.activity-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: var(--activity-bar-width);
+  height: 100%;
+  background: var(--activity-bar-bg-color);
+  color: var(--activity-bar-fg-color);
+  flex-shrink: 0;
+  z-index: 30;
+
+  .activity-bar-top,
+  .activity-bar-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .activity-bar-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--activity-bar-width);
+    height: 48px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--activity-bar-inactive-fg);
+    font-size: 22px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--activity-bar-fg-color);
+    }
+
+    &.is-active {
+      color: var(--activity-bar-fg-color);
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--activity-bar-active-border);
+      }
+    }
+  }
+}

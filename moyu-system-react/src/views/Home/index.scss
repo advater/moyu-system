@@ -1,0 +1,44 @@
+.home-page {
+  min-height: 0;
+
+  .ant-card {
+    background: transparent;
+  }
+
+  .ant-card-head {
+    min-height: 48px;
+    padding: 0;
+    border-bottom-color: var(--app-panel-border, rgba(0, 0, 0, 0.06));
+  }
+
+  .ant-card-body {
+    padding: 16px 0 0;
+  }
+
+  .home-desc {
+    margin-bottom: 16px;
+    opacity: 0.72;
+  }
+
+  .home-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 12px;
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9, #e6f4ff);
+      border-radius: 8px;
+      text-decoration: none;
+
+      &:hover {
+        color: #fff;
+        background: var(--el-color-primary);
+      }
+    }
+  }
+}

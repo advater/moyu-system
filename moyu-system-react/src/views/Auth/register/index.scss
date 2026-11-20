@@ -1,0 +1,28 @@
+.register-page,
+.password-page {
+  min-height: 100vh;
+  padding: 48px 24px;
+  background: #f5f7fa;
+  color: #1f1f1f;
+  box-sizing: border-box;
+}
+
+.register-page .register-title,
+.password-page .password-title {
+  font-size: 22px;
+  margin: 0 auto 20px;
+  max-width: 480px;
+  font-weight: 600;
+}
+
+.register-page .register-box,
+.password-page .password-box {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}

@@ -1,0 +1,103 @@
+.tags-view {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  overflow: hidden;
+  padding: 8px 12px;
+  gap: 4px;
+  background: transparent;
+  border-bottom: 1px solid var(--app-panel-border, var(--top-tool-border-color));
+  box-sizing: border-box;
+  flex-shrink: 0;
+
+  &.is-immerse {
+    background: transparent;
+    border-bottom-color: transparent;
+  }
+
+  .tags-view-item {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: 30px;
+    margin: 0;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--top-header-text-color);
+    background: color-mix(in srgb, var(--app-canvas-bg, #f5f6f8) 50%, transparent);
+    border: 1px solid color-mix(in srgb, var(--app-canvas-bg, #f5f6f8) 50%, transparent);
+    border-radius: 8px;
+    box-sizing: border-box;
+    cursor: pointer;
+    white-space: nowrap;
+    opacity: 1;
+
+    &:hover {
+      background: color-mix(in srgb, var(--app-canvas-bg, #f5f6f8) 70%, transparent);
+      border-color: color-mix(in srgb, var(--app-canvas-bg, #f5f6f8) 70%, transparent);
+    }
+
+    &.is-active {
+      color: var(--el-color-primary);
+      font-weight: 600;
+      background: var(--el-color-primary-light-9, #e6f4ff);
+      border-color: var(--el-color-primary-light-9, #e6f4ff);
+
+      .tags-view-close {
+        color: var(--el-color-primary);
+        opacity: 0.85;
+      }
+    }
+  }
+
+  .tags-view-more {
+    gap: 4px;
+    min-width: 44px;
+    justify-content: center;
+    opacity: 0.78;
+  }
+
+  .tags-view-close {
+    margin-left: 8px;
+    font-size: 10px;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .tags-view-measure {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    visibility: hidden;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+}
+
+.tags-view-overflow-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 120px;
+
+  &.is-active {
+    color: var(--el-color-primary);
+  }
+
+  .tags-view-close {
+    font-size: 10px;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}

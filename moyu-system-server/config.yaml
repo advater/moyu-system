@@ -1,0 +1,113 @@
+app:
+  port: 3000
+  wsPort: '3000'  # notice WS 与 HTTP 同端口（Nest @WebSocketGateway）；此字段仅文档/兼容，勿另起进程占端口
+  env: 'development'
+  apiPrefix: 'admin'
+  corsEnabled: true
+
+cors:
+  origins: 'http://localhost:3000,http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000'
+
+jwt:
+  # secret 由 .env 中 JWT_SECRET 提供
+  accessExpire: '15m'
+  refreshExpire: '7d'
+  issuer: 'moyu-system-server'
+
+session:
+  # secret 由 .env 中 SESSION_SECRET 提供
+  maxAge: 600000
+
+csrf:
+  # secret 由 .env 中 CSRF_SECRET 提供
+  cookieName: 'XSRF-TOKEN'
+  cookieMaxAge: 3600
+  size: 64
+
+# 以下 database 段仅作本地参考；运行时 Prisma 只读取 .env 的 DATABASE_URL
+# 请勿依赖 synchronize（Prisma 不使用该字段）
+database:
+  host: '127.0.0.1'
+  port: 3306
+  username: 'root'
+  database: 'moyu_cloud_db'
+  # password 由 .env 中 DB_PASSWORD 提供（若仍有脚本读取）
+  logging: ['error']
+  poolSize: 20
+
+redis:
+  host: 'localhost'
+  port: 6379
+  db: 0
+  # password 由 .env 中 REDIS_PASSWORD 提供
+
+file:
+  storage: 'local'  # local | oss；也可用环境变量 FILE_STORAGE
+  baseUrl: 'http://localhost:3000/'
+  uploadDir: 'uploads'
+  # oss:  # FILE_STORAGE=oss 时启用
+  #   endpoint: 'oss-cn-hangzhou.aliyuncs.com'
+  #   bucket: 'your-bucket'
+  #   accessKeyId: ''   # 建议放 .env：OSS_ACCESS_KEY_ID
+  #   accessKeySecret: ''
+  #   publicBaseUrl: 'https://cdn.example.com'
+  #   prefix: 'uploads/'
+  chunkDir: 'uploads/chunks'
+  bigFileDir: 'bigFiles'
+  tempDir: 'temp'
+  maxFileSize: '52428800'
+  maxChunkSize: '5242880'
+  maxChunkFileSize: '8388608'
+  maxLargeFileSize: '5368709120'
+  chunkConcurrency: '3'
+  base64MaxSize: '1048576'
+  chunkUploadTTL: '86400000'
+  # 软删除后物理文件保留毫秒（默认 7 天）；0 表示不自动清 blob
+  softDeleteTTL: '604800000'
+  allowedImageTypes:
+    - 'image/jpeg'
+    - 'image/png'
+    - 'image/gif'
+    - 'image/webp'
+    - 'image/svg+xml'
+    - 'image/bmp'
+    - 'image/tiff'
+  allowedDocTypes:
+    - 'application/pdf'
+    - 'application/msword'
+    - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    - 'application/vnd.ms-excel'
+    - 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    - 'text/plain'
+    - 'text/csv'
+  allowedExtensions:
+    - 'jpg'
+    - 'jpeg'
+    - 'png'
+    - 'gif'
+    - 'webp'
+    - 'pdf'
+    - 'doc'
+    - 'docx'
+    - 'xls'
+    - 'xlsx'
+    - 'zip'
+    - 'rar'
+    - '7z'
+    - 'mp4'
+    - 'mp3'
+    - 'txt'
+    - 'csv'
+
+log:
+  level: 'info'
+  errorFile: 'logs/errors.log'
+  requestFile: 'logs/requests.log'
+
+email:
+  host: 'smtp.example.com'
+  port: 587
+  secure: false
+  from: 'noreply@example.com'
+  notificationEnabled: true  # 全局邮件通知开关，设为 false 可彻底禁用邮件发送
+  # 邮箱账号密码由 .env 中 EMAIL_USER / EMAIL_PASS 提供

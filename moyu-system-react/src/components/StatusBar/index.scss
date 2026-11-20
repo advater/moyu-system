@@ -1,0 +1,27 @@
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--status-bar-height);
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: var(--status-bar-height);
+  color: var(--status-bar-fg-color);
+  background: var(--status-bar-bg-color);
+  flex-shrink: 0;
+  user-select: none;
+
+  .status-bar-left,
+  .status-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .status-bar-sep {
+    opacity: 0.55;
+  }
+}

@@ -1,0 +1,62 @@
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--app-canvas-bg);
+
+  .app-layout-workspace {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    padding: 0 var(--ds-page-inset, 12px) var(--ds-page-inset, 12px);
+    gap: var(--ds-gap, 12px);
+    box-sizing: border-box;
+  }
+
+  .app-layout-aside {
+    display: flex;
+    flex-direction: column;
+    width: var(--left-menu-max-width);
+    height: 100%;
+    background: var(--app-panel-bg, var(--editor-bg-color));
+    border: 1px solid var(--app-panel-border, var(--left-menu-border-color));
+    border-radius: var(--app-panel-radius);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .app-layout-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    background: var(--app-panel-bg, var(--editor-bg-color));
+    border: 1px solid var(--app-panel-border, var(--top-tool-border-color));
+    border-radius: var(--app-panel-radius);
+    overflow: hidden;
+  }
+
+  .app-layout-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--app-content-padding);
+    background: transparent;
+    box-sizing: border-box;
+
+    .tab-alive {
+      height: 100%;
+    }
+
+    .tab-alive[hidden] {
+      display: none !important;
+    }
+
+    &:has(.error-page) {
+      display: flex;
+      padding: 0;
+    }
+  }
+}

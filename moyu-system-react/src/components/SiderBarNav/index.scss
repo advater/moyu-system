@@ -1,0 +1,79 @@
+.sider-bar {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 0 12px;
+  background: transparent !important;
+  border-inline-end: none !important;
+  color: var(--left-menu-text-color);
+  font-size: 14px;
+
+  &.ant-menu-inline {
+    border-inline-end: none !important;
+  }
+
+  .ant-menu-item,
+  .ant-menu-submenu-title {
+    width: calc(100% - 16px) !important;
+    margin: 2px 8px !important;
+    padding-inline: 12px 28px !important;
+    border-radius: 8px !important;
+    color: var(--left-menu-text-color) !important;
+    height: 40px !important;
+    line-height: 40px !important;
+  }
+
+  .ant-menu-sub {
+    .ant-menu-item,
+    .ant-menu-submenu-title {
+      width: calc(100% - 32px) !important;
+      margin-inline: 20px 8px !important;
+      padding-inline-start: 12px !important;
+    }
+
+    .ant-menu-sub {
+      .ant-menu-item,
+      .ant-menu-submenu-title {
+        width: calc(100% - 48px) !important;
+        margin-inline: 32px 8px !important;
+      }
+
+      .ant-menu-sub {
+        .ant-menu-item,
+        .ant-menu-submenu-title {
+          width: calc(100% - 64px) !important;
+          margin-inline: 44px 8px !important;
+        }
+      }
+    }
+  }
+
+  .ant-menu-item .anticon,
+  .ant-menu-submenu-title .anticon {
+    font-size: 15px;
+  }
+
+  .ant-menu-item:hover,
+  .ant-menu-submenu-title:hover {
+    background: var(--el-color-primary-light-9, #e6f4ff) !important;
+    color: var(--el-color-primary) !important;
+  }
+
+  .ant-menu-item-selected {
+    color: var(--el-color-primary) !important;
+    background: var(--el-color-primary-light-9, #e6f4ff) !important;
+    font-weight: 600;
+  }
+
+  .ant-menu-submenu-selected > .ant-menu-submenu-title {
+    color: var(--el-color-primary) !important;
+  }
+
+  .ant-menu-sub {
+    background: transparent !important;
+  }
+
+  .ant-menu-submenu-arrow {
+    color: inherit !important;
+  }
+}

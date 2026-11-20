@@ -1,0 +1,47 @@
+.accent-picker {
+  .accent-picker-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+
+    input[type="color"] {
+      width: 28px;
+      height: 22px;
+      padding: 0;
+      border: 1px solid var(--top-tool-border-color);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      height: 26px;
+      padding: 0 8px;
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--top-header-text-color);
+      background: var(--editor-bg-color);
+      border: 1px solid var(--top-tool-border-color);
+    }
+  }
+
+  .accent-picker-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .accent-swatch {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid rgba(127, 127, 127, 0.45);
+    cursor: pointer;
+
+    &.is-active {
+      outline: 2px solid var(--el-color-primary);
+      outline-offset: 1px;
+    }
+  }
+}

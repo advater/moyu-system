@@ -1,0 +1,103 @@
+/*
+ * 默认颜色与布局壳变量。
+ * 颜色：可被 applyThemeVars / 主题切换覆盖（保留主题能力）。
+ * 结构尺寸/圆角：见 ./ds-structure.css（live-zb-uni 非颜色规范）。
+ */
+:root {
+  --el-color-primary: #007acc;
+  --login-bg-color: #f5f7fa;
+  --activity-bar-width: 48px;
+  --activity-bar-bg-color: #2c2c2c;
+  --activity-bar-fg-color: #ffffff;
+  --activity-bar-inactive-fg: #ffffff66;
+  --activity-bar-active-border: #007acc;
+  --left-menu-bg-color: #ffffff;
+  --left-menu-bg-light-color: #ffffff;
+  --left-menu-bg-active-color: #e6f4ff;
+  --left-menu-text-color: #3d3d3d;
+  --left-menu-text-active-color: #007acc;
+  --left-menu-collapse-bg-active-color: #e6f4ff;
+  --left-menu-border-color: rgba(0, 0, 0, 0.06);
+  --app-canvas-bg: #f5f6f8;
+  --app-panel-bg: #ffffff;
+  --app-panel-border: rgba(0, 0, 0, 0.06);
+  /* --app-panel-radius / --app-content-padding / --top-tool-height / --logo-height：由 ds-structure.css 提供 */
+  --logo-title-text-color: #333333;
+  --logo-border-color: #e7e7e7;
+  --top-header-bg-color: #dddddd;
+  --top-header-text-color: #333333;
+  --top-header-hover-color: #e8e8e8;
+  --top-tool-border-color: #e7e7e7;
+  --tags-view-height: 40px;
+  --tab-bar-bg-color: #ececec;
+  --tab-active-bg-color: var(--el-color-primary-light-9, #e6f4ff);
+  --editor-bg-color: #ffffff;
+  --status-bar-height: 22px;
+  --status-bar-bg-color: #007acc;
+  --status-bar-fg-color: #ffffff;
+  --app-content-bg-color: var(--editor-bg-color);
+  --app-footer-height: var(--status-bar-height);
+  --transition-time-02: 0.18s;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html.auth-page,
+html.auth-page body,
+html.auth-page #root {
+  background: #f5f7fa;
+  color: #1f1f1f;
+}
+
+html.grey-mode {
+  filter: grayscale(100%);
+}
+
+html,
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: var(--ds-font-size, 14px);
+  line-height: var(--ds-line-height, 1.6);
+}
+
+/* 列表页骨架（结构对齐 uni/DS；颜色跟主题面板） */
+.ds-tool-card,
+.ds-list-card {
+  background: var(--app-panel-bg, #fff);
+  border: 1px solid var(--app-panel-border, rgba(0, 0, 0, 0.06));
+  border-radius: var(--ds-radius-small, 10px);
+  box-shadow: var(--ds-card-shadow, none);
+  padding: var(--ds-card-padding-small, 12px 16px);
+}
+.ds-tool-card {
+  margin-bottom: 16px;
+}
+.ds-page-title {
+  font-size: var(--ds-title-size-large, 18px);
+  font-weight: var(--ds-font-weight-strong, 500);
+  margin: 0 0 12px;
+}
+
+/* antd 表格/分页/弹窗结构约定（不锁颜色） */
+.ant-table-wrapper .ant-table-pagination.ant-pagination {
+  margin: 12px 0 0;
+}
+.ant-table-wrapper .ant-table-thead > tr > th {
+  font-weight: var(--ds-font-weight-strong, 500);
+}
+.ant-modal .ant-modal-title {
+  font-size: var(--ds-title-size-large, 18px);
+  font-weight: var(--ds-font-weight-strong, 500);
+}
+.ant-modal .ant-modal-footer {
+  margin-top: 16px;
+}
+.ant-tag {
+  border-radius: var(--ds-radius-small, 10px);
+  padding-inline: 7px;
+}

@@ -1,0 +1,1358 @@
+// =============================================================
+// Prisma Schema — moyu-system-server
+// 数据库：MySQL
+// 库名：moyu_cloud_db（与 kefu 共用）
+// 表前缀：sys_ （@@map 指定）
+// 约定：
+//   - Prisma 属性名始终为 camelCase（匹配 DO 的字段），
+//     通过 @map("xxx_yyy") 映射数据库 snake_case 列。
+//   - 审计字段：creator / updater / createTime / updateTime
+//               / deleted / deletedAt (+ tenantId for TenantBaseDO)
+//   - 软删：deletedAt + deleted （PrismaService.$extends 自动过滤）
+//   - 关联：核心从属边使用 Prisma @relation + DB 外键（RESTRICT / SET NULL）
+//     刻意不加 FK：parentId=0 树哨兵、审计/API 日志 userId=0、
+//     字典 type 软删改写唯一码、租户 contactUser 冷启动顺序
+// =============================================================
+
+generator client {
+  provider     = "prisma-client"
+  charset      = "utf8mb4"
+  // Prisma 7 必须显式指定 output；放到 src 下以便随 Nest 编译，并用 @/generated 引用
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// 1. 部门（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysDept {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId     String   @map("tenant_id") @db.VarChar(64)
+  name         String   @map("name") @db.VarChar(30)
+  parentId     Int      @map("parent_id") @db.UnsignedInt @default(0)
+  sort         Int      @map("sort") @db.Int @default(0)
+  leaderUserId Int?     @map("leader_user_id") @db.UnsignedInt
+  phone        String?  @map("phone") @db.VarChar(11)
+  email        String?  @map("email") @db.VarChar(50)
+  status       Int      @map("status") @db.TinyInt @default(1)
+
+  creator      String?  @map("creator") @db.VarChar(64)
+  updater      String?  @map("updater") @db.VarChar(64)
+  createTime   DateTime @map("create_time") @default(now())
+  updateTime   DateTime @map("update_time") @default(now()) @updatedAt
+  deleted      Boolean  @map("deleted") @default(false)
+  deletedAt    DateTime? @map("deleted_at")
+
+  /// parentId=0 表示根节点，无对应行，故不做自引用 FK
+  users      SysUser[] @relation("UserDept")
+  leaderUser SysUser?  @relation("DeptLeader", fields: [leaderUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+
+  @@map("sys_dept")
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([name])
+  @@index([deletedAt])
+  @@index([leaderUserId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 2. 岗位
+// ─────────────────────────────────────────────────────────────
+model SysPost {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  name       String   @map("name") @db.VarChar(50)
+  code       String   @map("code") @db.VarChar(64)
+  sort       Int      @map("sort") @db.Int @default(0)
+  status     Int      @map("status") @db.TinyInt @default(1)
+  remark     String?  @map("remark") @db.VarChar(500)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  userPosts SysUserPost[]
+
+  @@unique([tenantId, code], map: "uk_tenant_post_code")
+  @@index([tenantId])
+  @@map("sys_post")
+  @@index([name])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 3. 用户-岗位关联
+// ─────────────────────────────────────────────────────────────
+model SysUserPost {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId     Int      @map("user_id") @db.UnsignedInt
+  postId     Int      @map("post_id") @db.UnsignedInt
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  user SysUser @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  post SysPost @relation(fields: [postId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, userId, postId], map: "uk_tenant_user_post")
+  @@index([tenantId])
+  @@map("sys_user_post")
+  @@index([postId])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 4. 字典类型
+// ─────────────────────────────────────────────────────────────
+model SysDictType {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  name       String   @map("name") @db.VarChar(100)
+  type       String   @map("type") @db.VarChar(100)
+  status     Int      @map("status") @db.TinyInt @default(1)
+  remark     String?  @map("remark") @db.VarChar(500)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@unique([tenantId, type], map: "uk_tenant_dict_type")
+  @@index([tenantId])
+  @@map("sys_dict_type")
+  @@index([name])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 5. 字典数据
+// ─────────────────────────────────────────────────────────────
+model SysDictData {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  sort       Int      @map("sort") @db.Int @default(0)
+  label      String   @map("label") @db.VarChar(100)
+  value      String   @map("value") @db.VarChar(100)
+  dictType   String   @map("dict_type") @db.VarChar(100)
+  status     Int      @map("status") @db.TinyInt @default(1)
+  colorType  String?  @map("color_type") @db.VarChar(50)
+  cssClass   String?  @map("css_class") @db.VarChar(100)
+  remark     String?  @map("remark") @db.VarChar(500)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@unique([tenantId, dictType, value], map: "uk_tenant_dict_type_value")
+  @@index([tenantId])
+  @@map("sys_dict_data")
+  @@index([dictType])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 6. 用户（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysUser {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId    String   @map("tenant_id") @db.VarChar(64)
+  username    String   @map("username") @db.VarChar(30)
+  password    String   @map("password") @db.VarChar(100)
+  remark      String?  @map("remark") @db.VarChar(500)
+  deptId      Int?     @map("dept_id") @db.UnsignedInt
+  postIds     Json?    @map("post_ids")  // number[] -> JSON array
+  status      Int      @map("status") @db.TinyInt @default(1)
+  loginIp     String?  @map("login_ip") @db.VarChar(50)
+  loginDate   DateTime? @map("login_date")
+  /// 最近一次修改密码时间（用于密码过期策略）
+  passwordUpdateTime DateTime? @map("password_update_time")
+  /// 是否必须修改密码（管理员重置后或策略强制）
+  mustChangePassword Boolean @map("must_change_password") @default(false)
+  /// 权限版本号：赋权/角色变更时递增，令牌快照与之不一致即立即失效
+  permVersion Int      @map("perm_version") @default(0)
+
+  creator     String?  @map("creator") @db.VarChar(64)
+  updater     String?  @map("updater") @db.VarChar(64)
+  createTime  DateTime @map("create_time") @default(now())
+  updateTime  DateTime @map("update_time") @default(now()) @updatedAt
+  deleted     Boolean  @map("deleted") @default(false)
+  deletedAt   DateTime? @map("deleted_at")
+
+  dept           SysDept?          @relation("UserDept", fields: [deptId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  ledDepts       SysDept[]         @relation("DeptLeader")
+  profile        SysUserProfile?
+  userRoles      SysUserRole[]
+  userPosts      SysUserPost[]
+  socialBinds    SysSocialUserBind[]
+  notifyMessages SysNotifyMessage[]
+  oauth2AccessTokens  SysOAuth2AccessToken[]
+  oauth2RefreshTokens SysOAuth2RefreshToken[]
+  oauth2Codes         SysOAuth2Code[]
+  oauth2Approves      SysOAuth2Approve[]
+
+  @@unique([tenantId, username], map: "uk_tenant_username")
+  @@map("sys_user")
+  @@index([deptId])
+  @@index([deletedAt])
+}
+
+/// 用户个人资料（与账号表分离；全部字段可选）
+model SysUserProfile {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId     Int      @map("user_id") @db.UnsignedInt
+  nickname   String?  @map("nickname") @db.VarChar(30)
+  email      String?  @map("email") @db.VarChar(50)
+  mobile     String?  @map("mobile") @db.VarChar(11)
+  sex        Int?     @map("sex") @db.TinyInt
+  avatar     String?  @map("avatar") @db.VarChar(255)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  user SysUser @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([userId], map: "uk_user_profile_user")
+  @@unique([tenantId, email], map: "uk_tenant_profile_email")
+  @@unique([tenantId, mobile], map: "uk_tenant_profile_mobile")
+  @@map("sys_user_profile")
+  @@index([tenantId])
+  @@index([tenantId, nickname])
+  @@index([deletedAt])
+}
+
+/// 历史密码（改密 / 重置时记录旧密码哈希，最近 N 条不可复用）
+model SysUserPasswordHistory {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId     Int      @map("user_id") @db.UnsignedInt
+  /// 旧密码哈希（bcrypt）
+  password   String   @map("password") @db.VarChar(100)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([tenantId, userId, createTime])
+  @@index([deletedAt])
+  @@map("sys_user_password_history")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 7. 角色（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysRole {
+  id               Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId         String   @map("tenant_id") @db.VarChar(64)
+  name             String   @map("name") @db.VarChar(30)
+  code             String   @map("code") @db.VarChar(100)
+  sort             Int      @map("sort") @db.Int @default(0)
+  status           Int      @map("status") @db.TinyInt @default(1)
+  type             Int      @map("type") @db.TinyInt @default(1)
+  remark           String?  @map("remark") @db.VarChar(500)
+  dataScope        Int      @map("data_scope") @db.TinyInt @default(1)
+  dataScopeDeptIds Json?    @map("data_scope_dept_ids")  // number[] -> JSON
+
+  creator          String?  @map("creator") @db.VarChar(64)
+  updater          String?  @map("updater") @db.VarChar(64)
+  createTime       DateTime @map("create_time") @default(now())
+  updateTime       DateTime @map("update_time") @default(now()) @updatedAt
+  deleted          Boolean  @map("deleted") @default(false)
+  deletedAt        DateTime? @map("deleted_at")
+
+  userRoles SysUserRole[]
+  roleMenus SysRoleMenu[]
+
+  @@unique([tenantId, code], map: "uk_tenant_role_code")
+  @@map("sys_role")
+  @@index([name])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 8. 菜单
+// ─────────────────────────────────────────────────────────────
+model SysMenu {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  name          String   @map("name") @db.VarChar(50)
+  permission    String?  @map("permission") @db.VarChar(100)
+  type          Int      @map("type") @db.TinyInt
+  sort          Int      @map("sort") @db.Int @default(0)
+  parentId      Int      @map("parent_id") @db.UnsignedInt @default(0)
+  path          String?  @map("path") @db.VarChar(200)
+  icon          String?  @map("icon") @db.VarChar(100)
+  component     String?  @map("component") @db.VarChar(255)
+  componentName String?  @map("component_name") @db.VarChar(100)
+  status        Int      @map("status") @db.TinyInt @default(1)
+  visible       Boolean  @map("visible") @default(true)
+  keepAlive     Boolean  @map("keep_alive") @default(false)
+  alwaysShow    Boolean  @map("always_show") @default(false)
+
+  creator       String?  @map("creator") @db.VarChar(64)
+  updater       String?  @map("updater") @db.VarChar(64)
+  createTime    DateTime @map("create_time") @default(now())
+  updateTime    DateTime @map("update_time") @default(now()) @updatedAt
+  deleted       Boolean  @map("deleted") @default(false)
+  deletedAt     DateTime? @map("deleted_at")
+
+  /// parentId=0 为根，不做自引用 FK
+  roleMenus SysRoleMenu[]
+
+  @@map("sys_menu")
+  @@index([parentId])
+  @@index([permission])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 9. 角色-菜单关联（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysRoleMenu {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  roleId     Int      @map("role_id") @db.UnsignedInt
+  menuId     Int      @map("menu_id") @db.UnsignedInt
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  role SysRole @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  menu SysMenu @relation(fields: [menuId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, roleId, menuId], map: "uk_tenant_role_menu")
+  @@map("sys_role_menu")
+  @@index([menuId])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 10. 用户-角色关联
+// ─────────────────────────────────────────────────────────────
+model SysUserRole {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId     Int      @map("user_id") @db.UnsignedInt
+  roleId     Int      @map("role_id") @db.UnsignedInt
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  user SysUser @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  role SysRole @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, userId, roleId], map: "uk_tenant_user_role")
+  @@index([tenantId])
+  @@map("sys_user_role")
+  @@index([roleId])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 11. 通知公告
+// ─────────────────────────────────────────────────────────────
+model SysNotice {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  title      String   @map("title") @db.VarChar(50)
+  type       Int      @map("type") @db.TinyInt
+  content    String   @map("content") @db.LongText
+  status     Int      @map("status") @db.TinyInt @default(1)
+  /// 定向部门（空=全员）
+  targetDeptIds Json? @map("target_dept_ids")
+  /// 定向角色（空=不按角色过滤；与部门取并集）
+  targetRoleIds Json? @map("target_role_ids")
+  /// 计划发布时间（空=立即/手动推送）
+  publishTime DateTime? @map("publish_time")
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([tenantId])
+  @@map("sys_notice")
+  @@index([title])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 12. 站内信模板
+// ─────────────────────────────────────────────────────────────
+model SysNotifyTemplate {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  name       String   @map("name") @db.VarChar(100)
+  code       String   @map("code") @db.VarChar(100)
+  type       Int      @map("type") @db.TinyInt
+  nickname   String?  @map("nickname") @db.VarChar(50)
+  content    String   @map("content") @db.Text
+  params     Json?    @map("params")  // string[]
+  status     Int      @map("status") @db.TinyInt @default(1)
+  remark     String?  @map("remark") @db.VarChar(500)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  messages SysNotifyMessage[]
+
+  @@unique([tenantId, code], map: "uk_tenant_notify_template_code")
+  @@index([tenantId])
+  @@map("sys_notify_template")
+  @@index([name])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 13. 站内信消息
+// ─────────────────────────────────────────────────────────────
+model SysNotifyMessage {
+  id                Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId            Int      @map("user_id") @db.UnsignedInt
+  userType          Int      @map("user_type") @db.TinyInt
+  templateId        Int      @map("template_id") @db.UnsignedInt
+  templateCode      String   @map("template_code") @db.VarChar(100)
+  templateType      Int      @map("template_type") @db.TinyInt
+  templateNickname  String?  @map("template_nickname") @db.VarChar(50)
+  templateContent   String   @map("template_content") @db.Text
+  templateParams    Json?    @map("template_params")  // Record<string, any>
+  readStatus        Boolean  @map("read_status") @default(false)
+
+  creator           String?  @map("creator") @db.VarChar(64)
+  updater           String?  @map("updater") @db.VarChar(64)
+  createTime        DateTime @map("create_time") @default(now())
+  updateTime        DateTime @map("update_time") @default(now()) @updatedAt
+  deleted           Boolean  @map("deleted") @default(false)
+  deletedAt         DateTime? @map("deleted_at")
+
+  user     SysUser          @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  template SysNotifyTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId])
+  @@map("sys_notify_message")
+  @@index([userId, userType])
+  @@index([templateId])
+  @@index([readStatus])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 14. 邮件账号
+// ─────────────────────────────────────────────────────────────
+model SysMailAccount {
+  id              Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  mail            String   @map("mail") @db.VarChar(100)
+  username        String   @map("username") @db.VarChar(100)
+  password        String   @map("password") @db.VarChar(255)
+  host            String   @map("host") @db.VarChar(100)
+  port            Int      @map("port") @db.Int
+  sslEnable       Boolean  @map("ssl_enable") @default(false)
+  starttlsEnable  Boolean  @map("starttls_enable") @default(false)
+
+  creator         String?  @map("creator") @db.VarChar(64)
+  updater         String?  @map("updater") @db.VarChar(64)
+  createTime      DateTime @map("create_time") @default(now())
+  updateTime      DateTime @map("update_time") @default(now()) @updatedAt
+  deleted         Boolean  @map("deleted") @default(false)
+  deletedAt       DateTime? @map("deleted_at")
+
+  templates SysMailTemplate[]
+  logs      SysMailLog[]
+
+  @@index([tenantId])
+  @@map("sys_mail_account")
+  @@index([mail])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 15. 邮件模板
+// ─────────────────────────────────────────────────────────────
+model SysMailTemplate {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  name       String   @map("name") @db.VarChar(100)
+  code       String   @map("code") @db.VarChar(100)
+  accountId  Int      @map("account_id") @db.UnsignedInt
+  nickname   String?  @map("nickname") @db.VarChar(50)
+  title      String   @map("title") @db.VarChar(200)
+  content    String   @map("content") @db.Text
+  params     Json?    @map("params")  // string[]
+  status     Int      @map("status") @db.TinyInt @default(1)
+  remark     String?  @map("remark") @db.VarChar(500)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  account SysMailAccount @relation(fields: [accountId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  logs    SysMailLog[]
+
+  @@unique([tenantId, code], map: "uk_tenant_mail_template_code")
+  @@index([tenantId])
+  @@map("sys_mail_template")
+  @@index([accountId])
+  @@index([name])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 16. 邮件日志 （id 为 Entity 里 bigint，这里用 BigInt 主键）
+// ─────────────────────────────────────────────────────────────
+model SysMailLog {
+  id                BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId            Int?     @map("user_id") @db.UnsignedInt
+  userType          Int?     @map("user_type") @db.TinyInt
+  toMails           String   @map("to_mails") @db.Text
+  ccMails           String?  @map("cc_mails") @db.Text
+  bccMails          String?  @map("bcc_mails") @db.Text
+  accountId         Int      @map("account_id") @db.UnsignedInt
+  fromMail          String   @map("from_mail") @db.VarChar(100)
+  templateId        Int?     @map("template_id") @db.UnsignedInt
+  templateCode      String?  @map("template_code") @db.VarChar(100)
+  templateNickname  String?  @map("template_nickname") @db.VarChar(50)
+  templateTitle     String   @map("template_title") @db.VarChar(200)
+  templateContent   String   @map("template_content") @db.LongText
+  templateParams    Json?    @map("template_params")  // Record<string, any>
+  sendStatus        Int      @map("send_status") @db.TinyInt @default(0)
+  sendTime          DateTime? @map("send_time")
+  sendMessageId     String?  @map("send_message_id") @db.VarChar(255)
+  sendException     String?  @map("send_exception") @db.LongText
+
+  creator           String?  @map("creator") @db.VarChar(64)
+  updater           String?  @map("updater") @db.VarChar(64)
+  createTime        DateTime @map("create_time") @default(now())
+  updateTime        DateTime @map("update_time") @default(now()) @updatedAt
+  deleted           Boolean  @map("deleted") @default(false)
+  deletedAt         DateTime? @map("deleted_at")
+
+  /// 审计日志不绑 userId FK（可空且历史保留）
+  account  SysMailAccount  @relation(fields: [accountId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  template SysMailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+
+  @@index([tenantId])
+  @@map("sys_mail_log")
+  @@index([userId, userType])
+  @@index([accountId])
+  @@index([templateId])
+  @@index([sendStatus])
+  @@index([sendTime])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 17. 短信渠道
+// ─────────────────────────────────────────────────────────────
+model SysSmsChannel {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  signature   String   @map("signature") @db.VarChar(50)
+  code        String   @map("code") @db.VarChar(64)
+  status      Int      @map("status") @db.TinyInt @default(1)
+  remark      String?  @map("remark") @db.VarChar(500)
+  apiKey      String   @map("api_key") @db.VarChar(128)
+  apiSecret   String   @map("api_secret") @db.VarChar(255)
+  callbackUrl String?  @map("callback_url") @db.VarChar(255)
+
+  creator     String?  @map("creator") @db.VarChar(64)
+  updater     String?  @map("updater") @db.VarChar(64)
+  createTime  DateTime @map("create_time") @default(now())
+  updateTime  DateTime @map("update_time") @default(now()) @updatedAt
+  deleted     Boolean  @map("deleted") @default(false)
+  deletedAt   DateTime? @map("deleted_at")
+
+  templates SysSmsTemplate[]
+  logs      SysSmsLog[]
+
+  @@unique([tenantId, code], map: "uk_tenant_sms_channel_code")
+  @@index([tenantId])
+  @@map("sys_sms_channel")
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 18. 短信模板
+// ─────────────────────────────────────────────────────────────
+model SysSmsTemplate {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  type           Int      @map("type") @db.TinyInt
+  status         Int      @map("status") @db.TinyInt @default(1)
+  code           String   @map("code") @db.VarChar(64)
+  name           String   @map("name") @db.VarChar(100)
+  content        String   @map("content") @db.VarChar(500)
+  params         Json?    @map("params")  // string[]
+  remark         String?  @map("remark") @db.VarChar(500)
+  apiTemplateId  String?  @map("api_template_id") @db.VarChar(128)
+  channelId      Int      @map("channel_id") @db.UnsignedInt
+  channelCode    String   @map("channel_code") @db.VarChar(64)
+
+  creator        String?  @map("creator") @db.VarChar(64)
+  updater        String?  @map("updater") @db.VarChar(64)
+  createTime     DateTime @map("create_time") @default(now())
+  updateTime     DateTime @map("update_time") @default(now()) @updatedAt
+  deleted        Boolean  @map("deleted") @default(false)
+  deletedAt      DateTime? @map("deleted_at")
+
+  channel SysSmsChannel @relation(fields: [channelId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  logs    SysSmsLog[]
+
+  @@unique([tenantId, code], map: "uk_tenant_sms_template_code")
+  @@index([tenantId])
+  @@map("sys_sms_template")
+  @@index([channelId])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 19. 短信日志
+// ─────────────────────────────────────────────────────────────
+model SysSmsLog {
+  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  channelId        Int       @map("channel_id") @db.UnsignedInt
+  channelCode      String    @map("channel_code") @db.VarChar(64)
+  templateId       Int       @map("template_id") @db.UnsignedInt
+  templateCode     String    @map("template_code") @db.VarChar(64)
+  templateType     Int       @map("template_type") @db.TinyInt
+  templateContent  String    @map("template_content") @db.VarChar(1000)
+  templateParams   Json?     @map("template_params")
+  apiTemplateId    String?   @map("api_template_id") @db.VarChar(128)
+  mobile           String    @map("mobile") @db.VarChar(11)
+  userId           Int?      @map("user_id") @db.UnsignedInt
+  userType         Int?      @map("user_type") @db.TinyInt
+  sendStatus       Int       @map("send_status") @db.TinyInt @default(0)
+  sendTime         DateTime? @map("send_time")
+  apiSendCode      String?   @map("api_send_code") @db.VarChar(64)
+  apiSendMsg       String?   @map("api_send_msg") @db.VarChar(500)
+  apiRequestId     String?   @map("api_request_id") @db.VarChar(128)
+  apiSerialNo      String?   @map("api_serial_no") @db.VarChar(128)
+  receiveStatus    Int?      @map("receive_status") @db.TinyInt
+  receiveTime      DateTime? @map("receive_time")
+  apiReceiveCode   String?   @map("api_receive_code") @db.VarChar(64)
+  apiReceiveMsg    String?   @map("api_receive_msg") @db.VarChar(500)
+
+  creator          String?   @map("creator") @db.VarChar(64)
+  updater          String?   @map("updater") @db.VarChar(64)
+  createTime       DateTime  @map("create_time") @default(now())
+  updateTime       DateTime  @map("update_time") @default(now()) @updatedAt
+  deleted          Boolean   @map("deleted") @default(false)
+  deletedAt        DateTime? @map("deleted_at")
+
+  channel  SysSmsChannel  @relation(fields: [channelId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  template SysSmsTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([tenantId])
+  @@map("sys_sms_log")
+  @@index([mobile])
+  @@index([channelId])
+  @@index([templateId])
+  @@index([sendStatus])
+  @@index([receiveStatus])
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 20. 短信验证码 (SysSmsCodeDO)
+// ─────────────────────────────────────────────────────────────
+model SysSmsCode {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  mobile     String   @map("mobile") @db.VarChar(11)
+  code       String   @map("code") @db.VarChar(10)
+  scene      Int      @map("scene") @db.TinyInt
+  createIp   String?  @map("create_ip") @db.VarChar(50)
+  todayIndex Int      @map("today_index") @db.Int @default(1)
+  used       Boolean  @map("used") @default(false)
+  usedTime   DateTime? @map("used_time")
+  usedIp     String?  @map("used_ip") @db.VarChar(50)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([tenantId])
+  @@map("sys_sms_code")
+  @@index([mobile, scene])
+  @@index([used])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 21. 社交（三方）用户
+// ─────────────────────────────────────────────────────────────
+model SysSocialUser {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  type          Int      @map("type") @db.TinyInt
+  openid        String   @map("openid") @db.VarChar(128)
+  token         String?  @map("token") @db.VarChar(1024)
+  rawTokenInfo  String?  @map("raw_token_info") @db.Text
+  nickname      String?  @map("nickname") @db.VarChar(100)
+  avatar        String?  @map("avatar") @db.VarChar(512)
+  rawUserInfo   String?  @map("raw_user_info") @db.LongText
+  code          String?  @map("code") @db.VarChar(256)
+  state         String?  @map("state") @db.VarChar(256)
+
+  creator       String?  @map("creator") @db.VarChar(64)
+  updater       String?  @map("updater") @db.VarChar(64)
+  createTime    DateTime @map("create_time") @default(now())
+  updateTime    DateTime @map("update_time") @default(now()) @updatedAt
+  deleted       Boolean  @map("deleted") @default(false)
+  deletedAt     DateTime? @map("deleted_at")
+
+  binds SysSocialUserBind[]
+
+  @@unique([tenantId, type, openid], map: "uk_tenant_social_type_openid")
+  @@index([tenantId])
+  @@map("sys_social_user")
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 22. 社交用户绑定
+// ─────────────────────────────────────────────────────────────
+model SysSocialUserBind {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId        Int      @map("user_id") @db.UnsignedInt
+  userType      Int      @map("user_type") @db.TinyInt
+  socialUserId  Int      @map("social_user_id") @db.UnsignedInt
+  socialType    Int      @map("social_type") @db.TinyInt
+
+  creator       String?  @map("creator") @db.VarChar(64)
+  updater       String?  @map("updater") @db.VarChar(64)
+  createTime    DateTime @map("create_time") @default(now())
+  updateTime    DateTime @map("update_time") @default(now()) @updatedAt
+  deleted       Boolean  @map("deleted") @default(false)
+  deletedAt     DateTime? @map("deleted_at")
+
+  user       SysUser       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  socialUser SysSocialUser @relation(fields: [socialUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, userId, userType, socialType], map: "uk_tenant_user_social_type")
+  @@index([tenantId])
+  @@map("sys_social_user_bind")
+  @@index([socialUserId])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 23. 社交客户端（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysSocialClient {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId     String   @map("tenant_id") @db.VarChar(64)
+  name         String   @map("name") @db.VarChar(100)
+  socialType   Int      @map("social_type") @db.TinyInt
+  userType     Int      @map("user_type") @db.TinyInt
+  status       Int      @map("status") @db.TinyInt @default(1)
+  clientId     String   @map("client_id") @db.VarChar(255)
+  clientSecret String   @map("client_secret") @db.VarChar(255)
+  agentId      String?  @map("agent_id") @db.VarChar(128)
+  publicKey    String?  @map("public_key") @db.Text
+
+  creator      String?  @map("creator") @db.VarChar(64)
+  updater      String?  @map("updater") @db.VarChar(64)
+  createTime   DateTime @map("create_time") @default(now())
+  updateTime   DateTime @map("update_time") @default(now()) @updatedAt
+  deleted      Boolean  @map("deleted") @default(false)
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@map("sys_social_client")
+  @@index([tenantId, socialType, userType])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 24. 登录日志
+// ─────────────────────────────────────────────────────────────
+model SysLoginLog {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  logType    Int      @map("log_type") @db.TinyInt
+  traceId    String?  @map("trace_id") @db.VarChar(64)
+  userId     Int?     @map("user_id") @db.UnsignedInt
+  userType   Int?     @map("user_type") @db.TinyInt
+  username   String   @map("username") @db.VarChar(30)
+  result     Int      @map("result") @db.TinyInt
+  userIp     String   @map("user_ip") @db.VarChar(50)
+  /// IP 归属地（ip2region 解析结果）
+  location   String?  @map("location") @db.VarChar(128)
+  userAgent  String   @map("user_agent") @db.VarChar(512)
+  /// 失败原因（业务错误码，如 AUTH.PASSWORD_MISMATCH；成功时为空）
+  failReason String?  @map("fail_reason") @db.VarChar(128)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([tenantId])
+  @@map("sys_login_log")
+  @@index([userId, userType])
+  @@index([username])
+  @@index([createTime])
+  @@index([result])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 25. 操作日志
+// ─────────────────────────────────────────────────────────────
+model SysOperateLog {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  traceId        String?  @map("trace_id") @db.VarChar(64)
+  userId         Int?     @map("user_id") @db.UnsignedInt
+  userType       Int?     @map("user_type") @db.TinyInt
+  type           String   @map("type") @db.VarChar(64)
+  subType        String   @map("sub_type") @db.VarChar(64)
+  bizId          BigInt?  @map("biz_id") @db.UnsignedBigInt  // Entity number -> UnsignedBigInt
+  action         String   @map("action") @db.Text
+  extra          String?  @map("extra") @db.LongText
+  requestMethod  String?  @map("request_method") @db.VarChar(16)
+  requestUrl     String?  @map("request_url") @db.VarChar(255)
+  userIp         String   @map("user_ip") @db.VarChar(50)
+  userAgent      String   @map("user_agent") @db.VarChar(512)
+
+  creator        String?  @map("creator") @db.VarChar(64)
+  updater        String?  @map("updater") @db.VarChar(64)
+  createTime     DateTime @map("create_time") @default(now())
+  updateTime     DateTime @map("update_time") @default(now()) @updatedAt
+  deleted        Boolean  @map("deleted") @default(false)
+  deletedAt      DateTime? @map("deleted_at")
+
+  @@index([tenantId])
+  @@map("sys_operate_log")
+  @@index([userId, userType])
+  @@index([type, subType])
+  @@index([bizId])
+  @@index([createTime])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 26. 租户
+// ─────────────────────────────────────────────────────────────
+model SysTenant {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  name           String    @map("name") @db.VarChar(100)
+  contactUserId  Int?      @map("contact_user_id") @db.UnsignedInt
+  contactName    String?     @map("contact_name") @db.VarChar(50)
+  contactMobile  String?     @map("contact_mobile") @db.VarChar(11)
+  status         Int       @map("status") @db.TinyInt @default(1)
+  websites       Json?     @map("websites")  // string[]
+  packageId      Int?      @map("package_id") @db.UnsignedInt
+  expireTime     DateTime? @map("expire_time")
+  accountCount   Int       @map("account_count") @db.Int @default(0)
+
+  creator        String?   @map("creator") @db.VarChar(64)
+  updater        String?   @map("updater") @db.VarChar(64)
+  createTime     DateTime  @map("create_time") @default(now())
+  updateTime     DateTime  @map("update_time") @default(now()) @updatedAt
+  deleted        Boolean   @map("deleted") @default(false)
+  deletedAt      DateTime? @map("deleted_at")
+
+  /// contactUserId 冷启动顺序不稳，不加 FK
+  package SysTenantPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+
+  @@unique([name], map: "uk_tenant_name")
+  @@map("sys_tenant")
+  @@index([packageId])
+  @@index([contactMobile])
+  @@index([expireTime])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 26b. 参数配置（TenantBaseDO；平台默认放在租户 0）
+// ─────────────────────────────────────────────────────────────
+model SysConfig {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  category   String?  @map("category") @db.VarChar(50)
+  name       String   @map("name") @db.VarChar(100)
+  configKey  String   @map("config_key") @db.VarChar(100)
+  value      String   @map("value") @db.VarChar(2000)
+  visible    Boolean  @map("visible") @default(true)
+  remark     String?  @map("remark") @db.VarChar(500)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@unique([tenantId, configKey], map: "uk_tenant_config_key")
+  @@index([tenantId])
+  @@index([category])
+  @@index([deletedAt])
+  @@map("sys_config")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 26c. 文件元数据（TenantBaseDO；内容存本地盘/对象存储）
+// ─────────────────────────────────────────────────────────────
+model SysFile {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId    String   @map("tenant_id") @db.VarChar(64)
+  name        String   @map("name") @db.VarChar(256)
+  path        String   @map("path") @db.VarChar(512)
+  url         String   @map("url") @db.VarChar(1024)
+  type        String?  @map("type") @db.VarChar(128)
+  size        BigInt   @map("size") @db.BigInt @default(0)
+  hash        String?  @map("hash") @db.VarChar(64)
+  storageKind String?  @map("storage_kind") @db.VarChar(16)
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([tenantId])
+  @@index([tenantId, hash])
+  @@index([hash])
+  @@index([path])
+  @@index([createTime])
+  @@index([deletedAt])
+  @@map("sys_file")
+}
+
+model SysFileUpload {
+  id              Int      @id @default(autoincrement()) @db.UnsignedInt
+  uploadId        String   @unique @map("upload_id") @db.VarChar(64)
+  tenantId        String   @map("tenant_id") @db.VarChar(64)
+  name            String   @map("name") @db.VarChar(256)
+  mime            String   @map("mime") @db.VarChar(128)
+  ext             String   @map("ext") @db.VarChar(16)
+  size            BigInt   @map("size") @db.BigInt
+  hash            String   @map("hash") @db.VarChar(64)
+  hashType        String   @map("hash_type") @db.VarChar(32)
+  chunkSize       Int      @map("chunk_size")
+  totalChunks     Int      @map("total_chunks")
+  uploadedIndexes Json     @map("uploaded_indexes")
+  storageKind     String   @map("storage_kind") @db.VarChar(16)
+  ossUploadId     String?  @map("oss_upload_id") @db.VarChar(256)
+  destPath        String   @map("dest_path") @db.VarChar(512)
+  partEtags       Json?    @map("part_etags")
+  fileId          Int?     @map("file_id") @db.UnsignedInt
+  status          String   @map("status") @db.VarChar(16)
+  expireAt        DateTime @map("expire_at")
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([tenantId])
+  @@index([tenantId, hash])
+  @@index([status, expireAt])
+  @@index([deletedAt])
+  @@map("sys_file_upload")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 27. 租户套餐
+// ─────────────────────────────────────────────────────────────
+model SysTenantPackage {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @map("name") @db.VarChar(100)
+  status     Int      @map("status") @db.TinyInt @default(1)
+  remark     String?  @map("remark") @db.VarChar(500)
+  menuIds    Json?    @map("menu_ids")  // number[]
+  features   Json?    @map("features")  // { smsDailyLimit?, storageMb?, exportDailyLimit?, ... }
+
+  creator    String?  @map("creator") @db.VarChar(64)
+  updater    String?  @map("updater") @db.VarChar(64)
+  createTime DateTime @map("create_time") @default(now())
+  updateTime DateTime @map("update_time") @default(now()) @updatedAt
+  deleted    Boolean  @map("deleted") @default(false)
+  deletedAt  DateTime? @map("deleted_at")
+
+  tenants SysTenant[]
+
+  @@unique([name], map: "uk_tenant_package_name")
+  @@map("sys_tenant_package")
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 28. OAuth2 客户端
+// ─────────────────────────────────────────────────────────────
+model SysOAuth2Client {
+  id                            Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  clientId                      String   @map("client_id") @db.VarChar(128)
+  secret                        String   @map("secret") @db.VarChar(255)
+  name                          String   @map("name") @db.VarChar(100)
+  logo                          String?  @map("logo") @db.VarChar(255)
+  description                   String?  @map("description") @db.VarChar(500)
+  status                        Int      @map("status") @db.TinyInt @default(1)
+  accessTokenValiditySeconds    Int      @map("access_token_validity_seconds") @db.Int @default(7200)
+  refreshTokenValiditySeconds   Int      @map("refresh_token_validity_seconds") @db.Int @default(2592000)
+  redirectUris                  Json?    @map("redirect_uris")  // string[]
+  authorizedGrantTypes          Json?    @map("authorized_grant_types")  // string[]
+  scopes                        Json?    @map("scopes")  // string[]
+  autoApproveScopes             Json?    @map("auto_approve_scopes")  // string[]
+  authorities                   Json?    @map("authorities")  // string[]
+  resourceIds                   Json?    @map("resource_ids")  // string[]
+  additionalInformation         String?  @map("additional_information") @db.LongText
+
+  creator                       String?  @map("creator") @db.VarChar(64)
+  updater                       String?  @map("updater") @db.VarChar(64)
+  createTime                    DateTime @map("create_time") @default(now())
+  updateTime                    DateTime @map("update_time") @default(now()) @updatedAt
+  deleted                       Boolean  @map("deleted") @default(false)
+  deletedAt                     DateTime? @map("deleted_at")
+
+  accessTokens  SysOAuth2AccessToken[]
+  refreshTokens SysOAuth2RefreshToken[]
+  codes         SysOAuth2Code[]
+  approves      SysOAuth2Approve[]
+
+  @@unique([clientId], map: "uk_oauth2_client_id")
+  @@index([tenantId])
+  @@map("sys_oauth2_client")
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 29. OAuth2 访问令牌（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysOAuth2AccessToken {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId     String   @map("tenant_id") @db.VarChar(64)
+  accessToken  String   @map("access_token") @db.VarChar(255)
+  refreshToken String   @map("refresh_token") @db.VarChar(255)
+  userId       Int      @map("user_id") @db.UnsignedInt
+  userType     Int      @map("user_type") @db.TinyInt
+  userInfo     Json?    @map("user_info")  // Record<string, string>
+  clientId     String   @map("client_id") @db.VarChar(128)
+  scopes       Json?    @map("scopes")  // string[]
+  /// 签发时的用户权限版本快照（与 sys_user.perm_version 逐请求比对）
+  permVersion  Int      @map("perm_version") @default(0)
+  expiresTime  DateTime @map("expires_time")
+
+  creator      String?  @map("creator") @db.VarChar(64)
+  updater      String?  @map("updater") @db.VarChar(64)
+  createTime   DateTime @map("create_time") @default(now())
+  updateTime   DateTime @map("update_time") @default(now()) @updatedAt
+  deleted      Boolean  @map("deleted") @default(false)
+  deletedAt    DateTime? @map("deleted_at")
+
+  user   SysUser         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  client SysOAuth2Client @relation(fields: [clientId], references: [clientId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([accessToken], map: "uk_oauth2_access_token")
+  @@map("sys_oauth2_access_token")
+  @@index([refreshToken])
+  @@index([userId, userType])
+  @@index([clientId])
+  @@index([expiresTime])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 30. OAuth2 刷新令牌（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysOAuth2RefreshToken {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId      String   @map("tenant_id") @db.VarChar(64)
+  refreshToken  String   @map("refresh_token") @db.VarChar(255)
+  userId        Int      @map("user_id") @db.UnsignedInt
+  userType      Int      @map("user_type") @db.TinyInt
+  clientId      String   @map("client_id") @db.VarChar(128)
+  /// 刷新令牌家族编号：同一登录会话的轮换链共用；重放命中时整族吊销
+  familyId      String   @map("family_id") @db.VarChar(64)
+  scopes        Json?    @map("scopes")  // string[]
+  expiresTime   DateTime @map("expires_time")
+
+  creator       String?  @map("creator") @db.VarChar(64)
+  updater       String?  @map("updater") @db.VarChar(64)
+  createTime    DateTime @map("create_time") @default(now())
+  updateTime    DateTime @map("update_time") @default(now()) @updatedAt
+  deleted       Boolean  @map("deleted") @default(false)
+  deletedAt     DateTime? @map("deleted_at")
+
+  user   SysUser         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  client SysOAuth2Client @relation(fields: [clientId], references: [clientId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([refreshToken], map: "uk_oauth2_refresh_token")
+  @@map("sys_oauth2_refresh_token")
+  @@index([userId, userType])
+  @@index([familyId])
+  @@index([expiresTime])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 31. OAuth2 授权码
+// ─────────────────────────────────────────────────────────────
+model SysOAuth2Code {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  code         String   @map("code") @db.VarChar(255)
+  userId       Int      @map("user_id") @db.UnsignedInt
+  userType     Int      @map("user_type") @db.TinyInt
+  clientId     String   @map("client_id") @db.VarChar(128)
+  scopes       Json?    @map("scopes")  // string[]
+  redirectUri  String   @map("redirect_uri") @db.VarChar(512)
+  state        String?  @map("state") @db.VarChar(255)
+  expiresTime  DateTime @map("expires_time")
+
+  creator      String?  @map("creator") @db.VarChar(64)
+  updater      String?  @map("updater") @db.VarChar(64)
+  createTime   DateTime @map("create_time") @default(now())
+  updateTime   DateTime @map("update_time") @default(now()) @updatedAt
+  deleted      Boolean  @map("deleted") @default(false)
+  deletedAt    DateTime? @map("deleted_at")
+
+  user   SysUser         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  client SysOAuth2Client @relation(fields: [clientId], references: [clientId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([code], map: "uk_oauth2_code")
+  @@index([tenantId])
+  @@map("sys_oauth2_code")
+  @@index([userId, userType])
+  @@index([expiresTime])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 32. OAuth2 授权批准（按 scope 维度）
+// ─────────────────────────────────────────────────────────────
+model SysOAuth2Approve {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  tenantId   String   @map("tenant_id") @db.VarChar(64)
+  userId       Int      @map("user_id") @db.UnsignedInt
+  userType     Int      @map("user_type") @db.TinyInt
+  clientId     String   @map("client_id") @db.VarChar(128)
+  scope        String   @map("scope") @db.VarChar(128)
+  approved     Boolean  @map("approved") @default(false)
+  expiresTime  DateTime? @map("expires_time")
+
+  creator      String?  @map("creator") @db.VarChar(64)
+  updater      String?  @map("updater") @db.VarChar(64)
+  createTime   DateTime @map("create_time") @default(now())
+  updateTime   DateTime @map("update_time") @default(now()) @updatedAt
+  deleted      Boolean  @map("deleted") @default(false)
+  deletedAt    DateTime? @map("deleted_at")
+
+  user   SysUser         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  client SysOAuth2Client @relation(fields: [clientId], references: [clientId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([userId, userType, clientId, scope], map: "uk_oauth2_approve_user_client_scope")
+  @@index([tenantId])
+  @@map("sys_oauth2_approve")
+  @@index([expiresTime])
+  @@index([deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 33. 定时任务（平台级；handler 对应内置执行器名称）
+// ─────────────────────────────────────────────────────────────
+model SysJob {
+  id              Int       @id @default(autoincrement()) @db.UnsignedInt
+  name            String    @map("name") @db.VarChar(64)
+  status          Int       @map("status") @db.TinyInt @default(1) // 0 停用 / 1 启用
+  handlerName     String    @map("handler_name") @db.VarChar(64)
+  handlerParam    String?   @map("handler_param") @db.VarChar(255)
+  cronExpression  String    @map("cron_expression") @db.VarChar(64)
+  retryCount      Int       @map("retry_count") @db.Int @default(0)
+  retryInterval   Int       @map("retry_interval") @db.Int @default(0) // 秒
+  monitorTimeout  Int       @map("monitor_timeout") @db.Int @default(0) // 秒，0 不监控
+  remark          String?   @map("remark") @db.VarChar(500)
+
+  creator         String?   @map("creator") @db.VarChar(64)
+  updater         String?   @map("updater") @db.VarChar(64)
+  createTime      DateTime  @map("create_time") @default(now())
+  updateTime      DateTime  @map("update_time") @default(now()) @updatedAt
+  deleted         Boolean   @map("deleted") @default(false)
+  deletedAt       DateTime? @map("deleted_at")
+
+  logs SysJobLog[]
+
+  @@unique([name], map: "uk_job_name")
+  @@index([handlerName])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("sys_job")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 34. 定时任务执行日志（平台级）
+// ─────────────────────────────────────────────────────────────
+model SysJobLog {
+  id            Int       @id @default(autoincrement()) @db.UnsignedInt
+  jobId         Int       @map("job_id") @db.UnsignedInt
+  handlerName   String    @map("handler_name") @db.VarChar(64)
+  handlerParam  String?   @map("handler_param") @db.VarChar(255)
+  executeIndex  Int       @map("execute_index") @db.Int @default(1)
+  beginTime     DateTime  @map("begin_time")
+  endTime       DateTime? @map("end_time")
+  duration      Int?      @map("duration") @db.Int // ms
+  status        Int       @map("status") @db.TinyInt @default(0) // 0 成功 / 1 失败
+  result        String?   @map("result") @db.VarChar(4000)
+
+  createTime    DateTime  @map("create_time") @default(now())
+
+  job SysJob @relation(fields: [jobId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([jobId])
+  @@index([handlerName])
+  @@index([beginTime])
+  @@index([status])
+  @@map("sys_job_log")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 35. API 访问日志（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysApiAccessLog {
+  id              Int       @id @default(autoincrement()) @db.UnsignedInt
+  tenantId        String    @map("tenant_id") @db.VarChar(64)
+  traceId         String?   @map("trace_id") @db.VarChar(64)
+  userId          Int       @map("user_id") @db.UnsignedInt @default(0)
+  userType        Int       @map("user_type") @db.TinyInt @default(0)
+  applicationName String    @map("application_name") @db.VarChar(50)
+  requestMethod   String    @map("request_method") @db.VarChar(16)
+  requestUrl      String    @map("request_url") @db.VarChar(512)
+  requestParams   String?   @map("request_params") @db.Text
+  responseBody    String?   @map("response_body") @db.Text
+  userIp          String?   @map("user_ip") @db.VarChar(50)
+  userAgent       String?   @map("user_agent") @db.VarChar(512)
+  operateModule   String?   @map("operate_module") @db.VarChar(50)
+  operateName     String?   @map("operate_name") @db.VarChar(50)
+  operateType     Int       @map("operate_type") @db.TinyInt @default(0)
+  beginTime       DateTime  @map("begin_time")
+  endTime         DateTime  @map("end_time")
+  duration        Int       @map("duration") @db.Int @default(0)
+  resultCode      Int       @map("result_code") @db.Int @default(0)
+  resultMsg       String?   @map("result_msg") @db.VarChar(512)
+
+  createTime      DateTime  @map("create_time") @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([beginTime])
+  @@index([requestUrl])
+  @@map("sys_api_access_log")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 36. API 异常日志（TenantBaseDO）
+// ─────────────────────────────────────────────────────────────
+model SysApiErrorLog {
+  id                         Int       @id @default(autoincrement()) @db.UnsignedInt
+  tenantId                   String    @map("tenant_id") @db.VarChar(64)
+  traceId                    String?   @map("trace_id") @db.VarChar(64)
+  userId                     Int       @map("user_id") @db.UnsignedInt @default(0)
+  userType                   Int       @map("user_type") @db.TinyInt @default(0)
+  applicationName            String    @map("application_name") @db.VarChar(50)
+  requestMethod              String    @map("request_method") @db.VarChar(16)
+  requestUrl                 String    @map("request_url") @db.VarChar(512)
+  requestParams              String?   @map("request_params") @db.Text
+  userIp                     String?   @map("user_ip") @db.VarChar(50)
+  userAgent                  String?   @map("user_agent") @db.VarChar(512)
+  exceptionTime              DateTime  @map("exception_time")
+  exceptionName              String    @map("exception_name") @db.VarChar(128)
+  exceptionMessage           String?   @map("exception_message") @db.Text
+  exceptionRootCauseMessage  String?   @map("exception_root_cause_message") @db.Text
+  exceptionStackTrace        String?   @map("exception_stack_trace") @db.Text
+  exceptionClassName         String?   @map("exception_class_name") @db.VarChar(256)
+  exceptionFileName          String?   @map("exception_file_name") @db.VarChar(256)
+  exceptionMethodName        String?   @map("exception_method_name") @db.VarChar(128)
+  exceptionLineNumber        Int?      @map("exception_line_number") @db.Int
+  processStatus              Int       @map("process_status") @db.TinyInt @default(0) // 0 未处理 / 1 已处理 / 2 已忽略
+  processTime                DateTime? @map("process_time")
+  processUserId              Int?      @map("process_user_id") @db.UnsignedInt
+
+  createTime                 DateTime  @map("create_time") @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([exceptionTime])
+  @@index([processStatus])
+  @@map("sys_api_error_log")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 37. 业务错误码（TenantBaseDO；平台默认放租户 0）
+// ─────────────────────────────────────────────────────────────
+model SysErrorCode {
+  id              Int       @id @default(autoincrement()) @db.UnsignedInt
+  tenantId        String    @map("tenant_id") @db.VarChar(64)
+  type            Int       @map("type") @db.TinyInt @default(2) // 1 自动生成 / 2 手动维护
+  applicationName String    @map("application_name") @db.VarChar(50)
+  code            Int       @map("code") @db.Int
+  message         String    @map("message") @db.VarChar(512)
+  memo            String?   @map("memo") @db.VarChar(512)
+
+  creator         String?   @map("creator") @db.VarChar(64)
+  updater         String?   @map("updater") @db.VarChar(64)
+  createTime      DateTime  @map("create_time") @default(now())
+  updateTime      DateTime  @map("update_time") @default(now()) @updatedAt
+  deleted         Boolean   @map("deleted") @default(false)
+  deletedAt       DateTime? @map("deleted_at")
+
+  @@unique([tenantId, applicationName, code], map: "uk_tenant_app_error_code")
+  @@index([tenantId])
+  @@index([code])
+  @@index([deletedAt])
+  @@map("sys_error_code")
+}
